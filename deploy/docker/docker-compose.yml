@@ -4,7 +4,7 @@ services:
     container_name: lesto-postgres
     restart: always
     env_file:
-      - .env
+      - ../../.env
     ports:
       - "5432:5432"
     volumes:
