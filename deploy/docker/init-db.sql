@@ -1,0 +1,2 @@
+CREATE DATABASE identitydb;
+CREATE DATABASE orderdb;
