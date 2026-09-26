@@ -1,0 +1,40 @@
+{
+	"id": "ec248ba1-6c5c-4142-beee-92f40dd7089f",
+	"name": "Lesto - Local",
+	"values": [
+		{
+			"key": "baseUrl",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "token_administrador",
+			"value": "",
+			"type": "any",
+			"enabled": true
+		},
+		{
+			"key": "token_gestor",
+			"value": "",
+			"type": "any",
+			"enabled": true
+		},
+		{
+			"key": "token_estafeta",
+			"value": "",
+			"type": "any",
+			"enabled": true
+		},
+		{
+			"key": "token_cliente",
+			"value": "",
+			"type": "any",
+			"enabled": true
+		}
+	],
+	"color": null,
+	"_postman_variable_scope": "environment",
+	"_postman_exported_at": "2026-09-26T23:54:10.085Z",
+	"_postman_exported_using": "Postman/12.29.5"
+}

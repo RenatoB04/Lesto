@@ -1,0 +1,16 @@
+{
+	"id": "d3ae2015-9755-4495-b2c4-33ad72b388ea",
+	"name": "Lesto - Cloud",
+	"values": [
+		{
+			"key": "baseUrl",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		}
+	],
+	"color": null,
+	"_postman_variable_scope": "environment",
+	"_postman_exported_at": "2026-09-26T23:54:27.539Z",
+	"_postman_exported_using": "Postman/12.29.5"
+}

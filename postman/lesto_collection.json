@@ -1,0 +1,260 @@
+{
+  "info": {
+    "_postman_id": "14440ce1-24b8-4aa6-8147-dbf389d04a97",
+    "name": "Lesto",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "58548666",
+    "_collection_link": "https://go.postman.co/collection/58548666-14440ce1-24b8-4aa6-8147-dbf389d04a97?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Identity",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Login Admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Login com sucesso\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Guarda o token numa variável de ambiente chamada token_administrador\r\n    pm.environment.set(\"token_administrador\", jsonData.token);\r\n}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"admin@lesto.pt\",\r\n  \"password\": \"Admin123\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Login Gestor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Login com sucesso\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Guarda o token numa variável de ambiente chamada token_gestor\r\n    pm.environment.set(\"token_gestor\", jsonData.token);\r\n}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"gestor@lesto.pt\",\r\n  \"password\": \"Gestor123\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Login Estafeta",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Login com sucesso\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Guarda o token numa variável de ambiente chamada token_estafeta\r\n    pm.environment.set(\"token_estafeta\", jsonData.token);\r\n}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"estafeta@lesto.pt\",\r\n  \"password\": \"Estafeta123\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Login Cliente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Login com sucesso\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Guarda o token numa variável de ambiente chamada token_cliente\r\n    pm.environment.set(\"token_cliente\", jsonData.token);\r\n}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"cliente@lesto.pt\",\r\n  \"password\": \"Cliente123\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "Listar Utilizadores (Admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Admin consegue listar utilizadores (Status 200)\", function () {\r\n    pm.response.to.have.status(200);\r\n});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_administrador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Listar Utilizadores (Falha Cliente)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Cliente é bloqueado (Status 403 Forbidden)\", function () {\r\n    pm.response.to.have.status(403);\r\n});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token_cliente}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
