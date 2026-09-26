@@ -14,12 +14,10 @@ Env.TraversePath().Load();
 var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER");
 var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
 
-if (string.IsNullOrWhiteSpace(dbUser) || string.IsNullOrWhiteSpace(dbPass))
-{
-    throw new InvalidOperationException("POSTGRES_USER ou POSTGRES_PASSWORD não estão definidos.");
-}
+// Se a variável DB_HOST existir (no Docker), usa-a. Caso contrário, usa "localhost" (desenvolvimento local).
+var dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
 
-var connectionString = $"Host=localhost;Database=identitydb;Username={dbUser};Password={dbPass}";
+var connectionString = $"Host={dbHost};Database=identitydb;Username={dbUser};Password={dbPass}";
 
 // Configurar PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>

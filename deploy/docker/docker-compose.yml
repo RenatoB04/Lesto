@@ -11,5 +11,34 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
 
+  identity-service:
+    build:
+      context: ../../src/IdentityService # Caminho relativo a partir desta pasta
+      dockerfile: Dockerfile
+    container_name: lesto-identity
+    restart: always
+    env_file:
+      - ../../.env
+    environment:
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+
+  api-gateway:
+    build:
+      context: ../../src/ApiGateway
+      dockerfile: Dockerfile
+    container_name: lesto-gateway
+    restart: always
+    env_file:
+      - ../../.env
+    ports:
+      - "5000:8080" # Expõe a porta 8080 do contentor para a porta 5000 da tua máquina
+    environment:
+      # Substitui o "localhost:5001" pelo endereço interno do identity-service
+      - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-service:8080
+    depends_on:
+      - identity-service
+
 volumes:
   postgres_data:
