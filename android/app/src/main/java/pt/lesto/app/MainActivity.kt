@@ -14,9 +14,13 @@ import pt.lesto.app.ui.auth.AuthViewModel
 import pt.lesto.app.ui.auth.AuthViewModelFactory
 import pt.lesto.app.ui.navigation.AppNavigation
 import pt.lesto.app.ui.theme.LestoTheme
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
 
         // Instanciar dependências base

@@ -40,9 +40,10 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.logo_lesto),
-            contentDescription = "Logótipo",
-            modifier = Modifier.size(120.dp)
+            // Altera apenas o R.drawable para apontar para o novo logo
+            painter = painterResource(id = R.drawable.lesto_transparent),
+            contentDescription = "Logótipo Lesto",
+            modifier = Modifier.size(240.dp) //
         )
 
         Spacer(modifier = Modifier.height(32.dp))

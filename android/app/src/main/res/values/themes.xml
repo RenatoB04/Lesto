@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Este tema herda da API nativa de Splash Screens -->
+    <style name="Theme.Lesto.Starting" parent="Theme.SplashScreen">
+        <!-- 1. Cor de fundo -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
 
-    <style name="Theme.Lesto" parent="android:Theme.Material.Light.NoActionBar" />
+        <!-- 2. O teu logótipo no centro -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+
+        <!-- 3. Tema a carregar depois do splash desaparecer (o Compose assume o controlo a seguir) -->
+        <item name="postSplashScreenTheme">@android:style/Theme.DeviceDefault.NoActionBar</item>
+    </style>
 </resources>
