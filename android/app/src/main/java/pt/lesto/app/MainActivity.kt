@@ -3,27 +3,29 @@ package pt.lesto.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import pt.lesto.app.ui.theme.LestoTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             LestoTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                // A Surface adota automaticamente o FundoNevoa definido no Theme.kt
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    TestScreen()
                 }
             }
         }
@@ -31,17 +33,40 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun TestScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Exibe o logótipo que adicionaste à pasta drawable
+        Image(
+            painter = painterResource(id = R.drawable.logo_lesto),
+            contentDescription = "Logótipo Lesto",
+            modifier = Modifier.size(150.dp)
+        )
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    LestoTheme {
-        Greeting("Android")
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "Bem-vindo à Lesto",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary // Fica na cor Petróleo
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { /* Sem ação para já */ },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary // Fica Laranja Sinal
+            )
+        ) {
+            Text(
+                text = "Testar Tema",
+                color = MaterialTheme.colorScheme.onSecondary // Fica Texto Noite
+            )
+        }
     }
 }

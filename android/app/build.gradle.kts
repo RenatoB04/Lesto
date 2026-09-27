@@ -51,4 +51,14 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Navigation Compose (Para navegar entre ecrãs)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+// Retrofit (Para os pedidos HTTP ao teu API Gateway)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+// DataStore Preferences (Para guardar o Token JWT localmente)
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 }
