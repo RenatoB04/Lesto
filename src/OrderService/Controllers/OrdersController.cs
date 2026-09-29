@@ -111,6 +111,17 @@ public class OrdersController : ControllerBase
                 query = query.Where(o => o.Status == statusEnum);
             }
         }
+        else if (User.IsInRole("Estafeta"))
+        {
+            // Estafetas SÓ veem as que lhes estão atribuídas
+            query = query.Where(o => o.CourierId == userId);
+            
+            // Também podem filtrar pelo estado (ex: ver apenas as "Validated" que têm de ir recolher)
+            if (!string.IsNullOrEmpty(estado) && Enum.TryParse<OrderStatus>(estado, true, out var statusEnum))
+            {
+                query = query.Where(o => o.Status == statusEnum);
+            }
+        }
         else
         {
             return Forbid();
@@ -185,6 +196,73 @@ public class OrdersController : ControllerBase
         
         await _context.SaveChangesAsync();
         return Ok(new { Message = "Encomenda atribuída com sucesso ao Estafeta." });
+    }
+
+    [HttpPost("{id}/pickup")]
+    [Authorize(Roles = "Estafeta")]
+    public async Task<IActionResult> PickupOrder(Guid id)
+    {
+        var order = await _context.Orders.FindAsync(id);
+        if (order == null) return NotFound(new { Message = "Encomenda não encontrada." });
+
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out Guid courierId) || order.CourierId != courierId)
+        {
+            return Forbid(); // Garante que não mexe em encomendas de outros estafetas
+        }
+
+        if (order.Status != OrderStatus.Validated)
+            return BadRequest(new { Message = "Apenas encomendas validadas podem ser recolhidas." });
+
+        order.Status = OrderStatus.InTransit;
+        
+        await _context.SaveChangesAsync();
+        return Ok(new { Message = "Encomenda recolhida e em trânsito." });
+    }
+
+    [HttpPost("{id}/deliver")]
+    [Authorize(Roles = "Estafeta")]
+    public async Task<IActionResult> DeliverOrder(Guid id)
+    {
+        var order = await _context.Orders.FindAsync(id);
+        if (order == null) return NotFound(new { Message = "Encomenda não encontrada." });
+
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out Guid courierId) || order.CourierId != courierId)
+        {
+            return Forbid();
+        }
+
+        if (order.Status != OrderStatus.InTransit)
+            return BadRequest(new { Message = "Apenas encomendas em trânsito podem ser marcadas como entregues." });
+
+        order.Status = OrderStatus.Delivered;
+        
+        await _context.SaveChangesAsync();
+        return Ok(new { Message = "Encomenda entregue com sucesso." });
+    }
+
+    [HttpPost("{id}/fail")]
+    [Authorize(Roles = "Estafeta")]
+    public async Task<IActionResult> FailOrder(Guid id, [FromBody] FailOrderDto dto)
+    {
+        var order = await _context.Orders.FindAsync(id);
+        if (order == null) return NotFound(new { Message = "Encomenda não encontrada." });
+
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out Guid courierId) || order.CourierId != courierId)
+        {
+            return Forbid();
+        }
+
+        if (order.Status != OrderStatus.InTransit)
+            return BadRequest(new { Message = "Apenas encomendas em trânsito podem ser marcadas como falhadas." });
+
+        order.Status = OrderStatus.Failed;
+        order.Reason = dto.Reason; 
+        
+        await _context.SaveChangesAsync();
+        return Ok(new { Message = "Falha na entrega registada." });
     }
 
     // Método auxiliar para evitar duplicação de código
