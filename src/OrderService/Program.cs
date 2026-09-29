@@ -1,6 +1,7 @@
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
+using OrderService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,13 @@ var connectionString = $"Host={dbHost};Database=orderdb;Username={dbUser};Passwo
 
 builder.Services.AddDbContext<OrderDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// Configurar o HttpClient para o OSRM com o User-Agent exigido
+builder.Services.AddHttpClient<IOsrmService, OsrmService>(client =>
+{
+    // O servidor partilhado do OSRM bane pedidos sem User-Agent válido
+    client.DefaultRequestHeaders.Add("User-Agent", "LestoApp_UniversidadeMinho/1.0");
+});
 
 // 3. Adicionar suporte para Controladores
 builder.Services.AddControllers();
