@@ -15,22 +15,33 @@ var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
 // Usa a variável DB_HOST se existir (no Docker), caso contrário usa localhost
 var dbHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost"; 
 
-// 2. Construir a Connection String dinamicamente (Garantir que a BD se chama orderdb)
+// 2. Construir a Connection String dinamicamente
 var connectionString = $"Host={dbHost};Database=orderdb;Username={dbUser};Password={dbPass}";
 
 builder.Services.AddDbContext<OrderDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Configurar o HttpClient para o OSRM com o User-Agent exigido
+// 3. Configurar os Clientes HTTP (OSRM e Identity Service)
+
+// Cliente para o OSRM (Com o User-Agent atualizado para a UPCA)
 builder.Services.AddHttpClient<IOsrmService, OsrmService>(client =>
 {
     // O servidor partilhado do OSRM bane pedidos sem User-Agent válido
-    client.DefaultRequestHeaders.Add("User-Agent", "LestoApp_UniversidadeMinho/1.0");
+    client.DefaultRequestHeaders.Add("User-Agent", "LestoApp_UPCA/1.0");
 });
 
-// 3. Adicionar suporte para Controladores
+// Cliente para o Identity Service (Necessário para a validação do Estafeta)
+var identityUrl = Environment.GetEnvironmentVariable("IDENTITY_API_URL") ?? "http://localhost:5001";
+builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(identityUrl);
+});
+
+// 4. Adicionar suporte para Controladores
 builder.Services.AddControllers();
 
+// 5. Configurar Autenticação JWT
+// Adicionado um valor de recurso (fallback) para evitar que a app quebre se o .env falhar a carregar
 var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "LestoSuperSecretaChaveDeAutenticacao2026!";
 
 builder.Services.AddAuthentication(options =>
@@ -56,15 +67,16 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// 4. Aplicar migrações automaticamente no arranque
+// 6. Aplicar migrações automaticamente no arranque
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
     context.Database.Migrate();
 }
 
+// 7. Configurar o Pipeline HTTP
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers(); // Ativar as rotas dos controladores
+app.MapControllers();
 
 app.Run();

@@ -16,11 +16,13 @@ public class OrdersController : ControllerBase
 {
     private readonly OrderDbContext _context;
     private readonly IOsrmService _osrmService;
+    private readonly IIdentityServiceClient _identityServiceClient;
 
-    public OrdersController(OrderDbContext context, IOsrmService osrmService)
+    public OrdersController(OrderDbContext context, IOsrmService osrmService, IIdentityServiceClient identityServiceClient)
     {
         _context = context;
         _osrmService = osrmService;
+        _identityServiceClient = identityServiceClient;
     }
 
     [HttpPost]
@@ -88,37 +90,101 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Cliente")]
-    public async Task<IActionResult> GetMyOrders()
+    [Authorize] // Qualquer utilizador autenticado pode aceder, a lógica filtra os dados
+    public async Task<IActionResult> GetOrders([FromQuery] string? estado)
     {
         var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdString, out Guid customerId)) return Unauthorized();
+        if (!Guid.TryParse(userIdString, out Guid userId)) return Unauthorized();
 
-        var orders = await _context.Orders
-            .Include(o => o.Origin)
-            .Include(o => o.Destination)
-            .Where(o => o.CustomerId == customerId)
-            .Select(o => MapearParaDto(o))
-            .ToListAsync();
+        IQueryable<Order> query = _context.Orders.Include(o => o.Origin).Include(o => o.Destination);
 
+        if (User.IsInRole("Cliente"))
+        {
+            // Clientes só veem as suas
+            query = query.Where(o => o.CustomerId == userId);
+        }
+        else if (User.IsInRole("Gestor") || User.IsInRole("Administrador"))
+        {
+            // Gestores veem todas, com filtro opcional por estado
+            if (!string.IsNullOrEmpty(estado) && Enum.TryParse<OrderStatus>(estado, true, out var statusEnum))
+            {
+                query = query.Where(o => o.Status == statusEnum);
+            }
+        }
+        else
+        {
+            return Forbid();
+        }
+
+        var orders = await query.Select(o => MapearParaDto(o)).ToListAsync();
         return Ok(orders);
     }
 
     [HttpGet("{id}")]
-    [Authorize(Roles = "Cliente")]
-    public async Task<IActionResult> GetMyOrderById(Guid id)
+    [Authorize]
+    public async Task<IActionResult> GetOrderById(Guid id)
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(userIdString, out Guid customerId)) return Unauthorized();
-
         var order = await _context.Orders
             .Include(o => o.Origin)
             .Include(o => o.Destination)
-            .FirstOrDefaultAsync(o => o.Id == id && o.CustomerId == customerId);
+            .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null) return NotFound(new { Message = "Encomenda não encontrada." });
 
+        // Se for Cliente, garantir que a encomenda lhe pertence
+        if (User.IsInRole("Cliente"))
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdString, out Guid customerId) || order.CustomerId != customerId)
+            {
+                return Forbid();
+            }
+        }
+
         return Ok(MapearParaDto(order));
+    }
+
+    [HttpPost("{id}/reject")]
+    [Authorize(Roles = "Gestor, Administrador")]
+    public async Task<IActionResult> RejectOrder(Guid id, [FromBody] RejectOrderDto dto)
+    {
+        var order = await _context.Orders.FindAsync(id);
+        if (order == null) return NotFound(new { Message = "Encomenda não encontrada." });
+
+        if (order.Status != OrderStatus.Pending)
+            return BadRequest(new { Message = "Apenas encomendas pendentes (Pending) podem ser rejeitadas." });
+
+        order.Status = OrderStatus.Rejected;
+        order.Reason = dto.Reason;
+        
+        await _context.SaveChangesAsync();
+        return Ok(new { Message = "Encomenda rejeitada com sucesso." });
+    }
+
+    [HttpPost("{id}/assign")]
+    [Authorize(Roles = "Gestor, Administrador")]
+    public async Task<IActionResult> AssignOrder(Guid id, [FromBody] AssignOrderDto dto)
+    {
+        var order = await _context.Orders.FindAsync(id);
+        if (order == null) return NotFound(new { Message = "Encomenda não encontrada." });
+
+        if (order.Status != OrderStatus.Pending)
+            return BadRequest(new { Message = "Apenas encomendas pendentes podem ser atribuídas." });
+
+        // Extrair o token do cabeçalho atual para o passar ao Identity Service
+        var authHeader = Request.Headers["Authorization"].ToString();
+        var token = authHeader.StartsWith("Bearer ") ? authHeader.Substring(7) : authHeader;
+
+        // Chamar o Identity Service
+        var isCourier = await _identityServiceClient.IsCourierAsync(dto.CourierId, token);
+        if (!isCourier)
+            return BadRequest(new { Message = "O utilizador selecionado não existe ou não tem o perfil de Estafeta." });
+
+        order.CourierId = dto.CourierId;
+        order.Status = OrderStatus.Validated; 
+        
+        await _context.SaveChangesAsync();
+        return Ok(new { Message = "Encomenda atribuída com sucesso ao Estafeta." });
     }
 
     // Método auxiliar para evitar duplicação de código
