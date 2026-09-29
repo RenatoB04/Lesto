@@ -78,12 +78,12 @@ namespace OrderService.Migrations
                 columns: new[] { "Id", "Latitude", "Longitude", "Name" },
                 values: new object[,]
                 {
-                    { new Guid("11111111-1111-1111-1111-111111111111"), 41.5503, -8.4199999999999999, "Ponto Braga Centro" },
-                    { new Guid("22222222-2222-2222-2222-222222222222"), 41.561399999999999, -8.3972999999999995, "Ponto Universidade Minho" },
-                    { new Guid("33333333-3333-3333-3333-333333333333"), 41.536000000000001, -8.6250999999999998, "Ponto Barcelos" },
-                    { new Guid("44444444-4444-4444-4444-444444444444"), 41.536700000000003, -8.6277000000000008, "Ponto IPCA" },
-                    { new Guid("55555555-5555-5555-5555-555555555555"), 41.407899999999998, -8.5192999999999994, "Ponto Famalicão" },
-                    { new Guid("66666666-6666-6666-6666-666666666666"), 41.444400000000002, -8.2960999999999991, "Ponto Guimarães" }
+                    { new Guid("a1f4e7c2-9b8d-4a3f-6c5e-2b1d9a8c7e3f"), 41.561399999999999, -8.3972999999999995, "Ponto Universidade Minho" },
+                    { new Guid("b2a1c9e8-d7f6-4e5d-8c9b-0a1f2e3d4c5b"), 41.444400000000002, -8.2960999999999991, "Ponto Guimarães" },
+                    { new Guid("c3e2d1f4-8a9b-4c7e-5d6f-3b2a1c9e8d7f"), 41.536000000000001, -8.6250999999999998, "Ponto Barcelos" },
+                    { new Guid("d8b3c9a2-5f6e-4b1a-8c2d-9e7f3a1b4c6d"), 41.5503, -8.4199999999999999, "Ponto Braga Centro" },
+                    { new Guid("e5d4c3b2-a1f9-4e8d-7c6b-5a4f3e2d1c9b"), 41.407899999999998, -8.5192999999999994, "Ponto Famalicão" },
+                    { new Guid("f9e8d7c6-b5a4-4f3e-2d1c-9b8a7c6e5d4f"), 41.536700000000003, -8.6277000000000008, "Ponto IPCA" }
                 });
 
             migrationBuilder.InsertData(

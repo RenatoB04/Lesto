@@ -34,12 +34,12 @@ public class OrderDbContext : DbContext
         );
 
         modelBuilder.Entity<Point>().HasData(
-            new Point { Id = Guid.Parse("11111111-1111-1111-1111-111111111111"), Name = "Ponto Braga Centro", Latitude = 41.5503, Longitude = -8.4200 },
-            new Point { Id = Guid.Parse("22222222-2222-2222-2222-222222222222"), Name = "Ponto Universidade Minho", Latitude = 41.5614, Longitude = -8.3973 },
-            new Point { Id = Guid.Parse("33333333-3333-3333-3333-333333333333"), Name = "Ponto Barcelos", Latitude = 41.5360, Longitude = -8.6251 },
-            new Point { Id = Guid.Parse("44444444-4444-4444-4444-444444444444"), Name = "Ponto IPCA", Latitude = 41.5367, Longitude = -8.6277 },
-            new Point { Id = Guid.Parse("55555555-5555-5555-5555-555555555555"), Name = "Ponto Famalicão", Latitude = 41.4079, Longitude = -8.5193 },
-            new Point { Id = Guid.Parse("66666666-6666-6666-6666-666666666666"), Name = "Ponto Guimarães", Latitude = 41.4444, Longitude = -8.2961 }
+            new Point { Id = Guid.Parse("d8b3c9a2-5f6e-4b1a-8c2d-9e7f3a1b4c6d"), Name = "Ponto Braga Centro", Latitude = 41.5503, Longitude = -8.4200 },
+            new Point { Id = Guid.Parse("a1f4e7c2-9b8d-4a3f-6c5e-2b1d9a8c7e3f"), Name = "Ponto Universidade Minho", Latitude = 41.5614, Longitude = -8.3973 },
+            new Point { Id = Guid.Parse("c3e2d1f4-8a9b-4c7e-5d6f-3b2a1c9e8d7f"), Name = "Ponto Barcelos", Latitude = 41.5360, Longitude = -8.6251 },
+            new Point { Id = Guid.Parse("f9e8d7c6-b5a4-4f3e-2d1c-9b8a7c6e5d4f"), Name = "Ponto IPCA", Latitude = 41.5367, Longitude = -8.6277 },
+            new Point { Id = Guid.Parse("e5d4c3b2-a1f9-4e8d-7c6b-5a4f3e2d1c9b"), Name = "Ponto Famalicão", Latitude = 41.4079, Longitude = -8.5193 },
+            new Point { Id = Guid.Parse("b2a1c9e8-d7f6-4e5d-8c9b-0a1f2e3d4c5b"), Name = "Ponto Guimarães", Latitude = 41.4444, Longitude = -8.2961 }
         );
     }
 }

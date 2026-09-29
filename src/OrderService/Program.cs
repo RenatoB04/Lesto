@@ -2,6 +2,9 @@ using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
 using OrderService.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +31,29 @@ builder.Services.AddHttpClient<IOsrmService, OsrmService>(client =>
 // 3. Adicionar suporte para Controladores
 builder.Services.AddControllers();
 
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "LestoSuperSecretaChaveDeAutenticacao2026!";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = "LestoIdentityService",
+        ValidAudience = "LestoApiGateway",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+    };
+});
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // 4. Aplicar migrações automaticamente no arranque
@@ -37,6 +63,7 @@ using (var scope = app.Services.CreateScope())
     context.Database.Migrate();
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers(); // Ativar as rotas dos controladores
 

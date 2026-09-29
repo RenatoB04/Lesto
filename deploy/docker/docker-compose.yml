@@ -13,7 +13,7 @@ services:
 
   identity-service:
     build:
-      context: ../../src/IdentityService # Caminho relativo a partir desta pasta
+      context: ../../src/IdentityService
       dockerfile: Dockerfile
     container_name: lesto-identity
     restart: always
@@ -21,6 +21,21 @@ services:
       - ../../.env
     ports:
       - "5001:8080"
+    environment:
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+
+  order-service:
+    build:
+      context: ../../src/OrderService
+      dockerfile: Dockerfile
+    container_name: lesto-order
+    restart: always
+    env_file:
+      - ../../.env
+    ports:
+      - "5002:8080"
     environment:
       - DB_HOST=postgres
     depends_on:
@@ -35,12 +50,14 @@ services:
     env_file:
       - ../../.env
     ports:
-      - "5000:8080" # Expõe a porta 8080 do contentor para a porta 5000 da tua máquina
+      - "5000:8080"
     environment:
-      # Substitui o "localhost:5001" pelo endereço interno do identity-service
       - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-service:8080
+      # Adicionamos aqui a ligação do Gateway para o contentor do Order Service
+      - ReverseProxy__Clusters__order-cluster__Destinations__destination1__Address=http://order-service:8080
     depends_on:
       - identity-service
+      - order-service
 
 volumes:
   postgres_data:
