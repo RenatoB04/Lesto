@@ -212,7 +212,7 @@ public class OrdersController : ControllerBase
         }
 
         if (order.Status != OrderStatus.Validated)
-            return BadRequest(new { Message = "Apenas encomendas validadas podem ser recolhidas." });
+            return Conflict(new { Message = "Apenas encomendas validadas podem ser recolhidas." });
 
         order.Status = OrderStatus.InTransit;
         
@@ -234,7 +234,7 @@ public class OrdersController : ControllerBase
         }
 
         if (order.Status != OrderStatus.InTransit)
-            return BadRequest(new { Message = "Apenas encomendas em trânsito podem ser marcadas como entregues." });
+            return Conflict(new { Message = "Apenas encomendas em trânsito podem ser alteradas." });
 
         order.Status = OrderStatus.Delivered;
         
@@ -256,7 +256,7 @@ public class OrdersController : ControllerBase
         }
 
         if (order.Status != OrderStatus.InTransit)
-            return BadRequest(new { Message = "Apenas encomendas em trânsito podem ser marcadas como falhadas." });
+            return Conflict(new { Message = "Apenas encomendas em trânsito podem ser alteradas." });
 
         order.Status = OrderStatus.Failed;
         order.Reason = dto.Reason; 
