@@ -1,18 +1,22 @@
 package pt.lesto.app.ui.navigation
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import pt.lesto.app.ui.auth.AuthViewModel
 import pt.lesto.app.ui.auth.LoginScreen
 import pt.lesto.app.ui.auth.RegisterScreen
+import pt.lesto.app.ui.neworder.NewOrderScreen
+import pt.lesto.app.ui.orders.MyOrdersScreen
 
 @Composable
 fun AppNavigation(authViewModel: AuthViewModel) {
@@ -24,7 +28,6 @@ fun AppNavigation(authViewModel: AuthViewModel) {
             LoginScreen(
                 viewModel = authViewModel,
                 onLoginSuccess = { role ->
-                    // Navega para o ecrã temporário e limpa o histórico de navegação
                     navController.navigate("home/$role") {
                         popUpTo("login") { inclusive = true }
                     }
@@ -39,7 +42,7 @@ fun AppNavigation(authViewModel: AuthViewModel) {
             RegisterScreen(
                 viewModel = authViewModel,
                 onRegisterSuccess = {
-                    navController.popBackStack() // Volta ao login após registo
+                    navController.popBackStack()
                 },
                 onNavigateBack = {
                     navController.popBackStack()
@@ -47,12 +50,36 @@ fun AppNavigation(authViewModel: AuthViewModel) {
             )
         }
 
-        // Ecrã temporário para validar o sucesso do login (Tarefas 6.3 a 6.6 tratam do resto)
         composable("home/{role}") { backStackEntry ->
             val role = backStackEntry.arguments?.getString("role") ?: "Desconhecido"
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "Bem-vindo! O teu perfil é: $role")
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Bem-vindo! O teu perfil é: $role")
+
+                Button(onClick = { navController.navigate("newOrder") }) {
+                    Text("Nova encomenda")
+                }
+
+                Button(onClick = { navController.navigate("myOrders") }) {
+                    Text("As minhas encomendas")
+                }
             }
+        }
+
+        composable("newOrder") {
+            NewOrderScreen(
+                onOrderCreated = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("myOrders") {
+            MyOrdersScreen()
         }
     }
 }

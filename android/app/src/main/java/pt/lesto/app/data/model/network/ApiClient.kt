@@ -15,6 +15,11 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.POST
+import pt.lesto.app.data.model.CreateOrderDto
+import pt.lesto.app.data.model.CreateOrderResponseDto
+import pt.lesto.app.data.model.OrderDto
+import pt.lesto.app.data.model.PointDto
+import retrofit2.http.GET
 
 // 1. Definição dos Endpoints da API
 interface ApiService {
@@ -23,6 +28,16 @@ interface ApiService {
 
     @POST("/api/auth/register")
     suspend fun register(@Body request: RegisterDto): Response<Any>
+
+    @GET("/api/points")
+    suspend fun getPoints(): Response<List<PointDto>>
+
+    @POST("/api/orders")
+    suspend fun createOrder(@Body request: CreateOrderDto): Response<CreateOrderResponseDto>
+
+    @GET("/api/orders")
+    suspend fun getMyOrders(): Response<List<OrderDto>>
+
 }
 
 // 2. Configuração do Cliente Retrofit
