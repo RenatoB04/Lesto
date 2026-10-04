@@ -2,7 +2,7 @@
 
 ## 1. General conventions
 
-- All API endpoints are consumed through the API Gateway.
+- All API endpoints are exposed through the API Gateway.
 - Requests and responses use JSON with camelCase property names.
 - Date and time values use ISO 8601 in UTC.
 - Protected endpoints require `Authorization: Bearer <access-token>`.

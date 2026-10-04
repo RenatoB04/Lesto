@@ -491,4 +491,3 @@ appsettings.*.local.json
 *.key
 *.pfx
 deploy/tls/
-android/local.properties

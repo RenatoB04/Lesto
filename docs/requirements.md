@@ -3,8 +3,8 @@
 ## 1. Purpose
 
 Lesto is a distributed last-mile delivery management system. It supports the
-delivery lifecycle from order creation to its final outcome and is consumed by
-the native Android application of the same name.
+delivery lifecycle from order creation to its final outcome through a secured,
+documented REST API.
 
 The project is intentionally limited to the academic scope. It does not process
 payments, provide real-time courier tracking, accept free-text address
@@ -88,7 +88,7 @@ from a pre-defined catalogue of delivery points.
 
 ## 6. Information flows
 
-1. The Android app sends all requests to the API Gateway.
+1. API consumers send all requests to the API Gateway.
 2. The Gateway authenticates protected requests and forwards them to Identity
    Service or Order Service.
 3. On order creation, Order Service calls OSRM with the coordinates of the

@@ -9,7 +9,7 @@ asynchronous processing.
 
 ```mermaid
 flowchart LR
-    App["Lesto Android App"] -->|HTTPS / REST| Gateway["API Gateway\nYARP"]
+    Consumer["API Consumers\nSwagger UI / Postman"] -->|HTTPS / REST| Gateway["API Gateway\nYARP"]
     Gateway -->|REST| Identity["Identity Service"]
     Gateway -->|REST| Order["Order Service"]
     Order -->|REST, internal network| Identity
@@ -22,7 +22,6 @@ flowchart LR
 
 | Component | Responsibility | Publicly exposed | Data ownership |
 |---|---|---:|---|
-| Android App | Mobile user interface for all roles. | Yes, as a client | Local session only. |
 | API Gateway | Single entry point, routing, JWT validation, and HTTPS termination. | Yes | None. |
 | Identity Service | Registration, login, JWT issuance, user and role management. | No | `identitydb`. |
 | Order Service | Delivery points, orders, order state machine, weight setting, and statistics. | No | `orderdb`. |
@@ -33,7 +32,7 @@ One PostgreSQL container hosts two logical databases during development:
 
 ## 3. Communication
 
-- The Android app calls only the API Gateway.
+- API consumers call only the API Gateway.
 - Gateway-to-service and service-to-service communication uses REST over the
   private Docker network.
 - Order Service calls Identity Service only to validate a selected courier at
@@ -66,7 +65,6 @@ other remains available demonstrates basic maintenance resilience.
 | Environment | Runtime | Public access |
 |---|---|---|
 | Local development | Docker Compose | Gateway on `http://localhost:8080`. |
-| Android emulator | Docker Compose | `http://10.0.2.2:8080`. |
 | Cloud demonstration | Linux VM with Docker Compose | Gateway on HTTPS port `8443`; restricted firewall rule. |
 
 ## 7. Architecture decisions

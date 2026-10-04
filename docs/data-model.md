@@ -32,7 +32,7 @@ OSRM.
 | Field | Type | Notes |
 |---|---|---|
 | `Id` | `Guid` | Primary key. |
-| `Name` | `string` | Display name shown in the app. |
+| `Name` | `string` | Display name returned by the API. |
 | `AddressLabel` | `string` | Read-only descriptive label. |
 | `Latitude` | `decimal` | WGS84 latitude. |
 | `Longitude` | `decimal` | WGS84 longitude. |

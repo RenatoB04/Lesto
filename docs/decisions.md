@@ -13,7 +13,7 @@
 | ADR-009 | Validate JWTs at Gateway and again at each service. | Accepted | Prevents services from trusting only the reverse proxy. |
 | ADR-010 | Use Docker Compose instead of Kubernetes. | Accepted | Docker Compose supports the required containerisation and a two-instance Order Service demonstration. |
 | ADR-011 | Deploy the final stack to a small cloud virtual machine. | Accepted | Directly demonstrates cloud publication and distribution. |
-| ADR-012 | Build the client as a Kotlin and Jetpack Compose Android app. | Accepted | Satisfies the separate Android interface objective while consuming the same APIs. |
+| ADR-012 | Deliver the backend as the project interface. | Accepted | OpenAPI, Swagger UI, and Postman provide a complete and demonstrable interface without a dedicated client application. |
 | ADR-013 | Include a minimal Order Service statistics endpoint. | Accepted | Ensures managers can obtain operational information as requested by the assignment. |
 
 ## Open questions
