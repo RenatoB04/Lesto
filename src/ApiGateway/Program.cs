@@ -42,6 +42,13 @@ builder.Services.AddReverseProxy()
 
 var app = builder.Build();
 
+var instanceName = Environment.GetEnvironmentVariable("INSTANCE_NAME") ?? Environment.MachineName;
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Served-By"] = instanceName;
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 

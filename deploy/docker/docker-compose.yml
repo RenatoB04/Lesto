@@ -26,11 +26,12 @@ services:
     depends_on:
       - postgres
 
-  order-service:
+  order-service-1:
     build:
       context: ../../src/OrderService
       dockerfile: Dockerfile
-    container_name: lesto-order
+    image: lesto-order-service
+    container_name: lesto-order-1
     restart: always
     env_file:
       - ../../.env
@@ -39,8 +40,27 @@ services:
     environment:
       - DB_HOST=postgres
       - IDENTITY_API_URL=http://identity-service:8080
+      - INSTANCE_NAME=order-service-1
     depends_on:
       - postgres
+      - identity-service
+
+  order-service-2:
+    image: lesto-order-service
+    pull_policy: never
+    container_name: lesto-order-2
+    restart: always
+    env_file:
+      - ../../.env
+    ports:
+      - "5003:8080"
+    environment:
+      - DB_HOST=postgres
+      - IDENTITY_API_URL=http://identity-service:8080
+      - INSTANCE_NAME=order-service-2
+    depends_on:
+      - order-service-1
+      - identity-service
 
   api-gateway:
     build:
@@ -54,11 +74,13 @@ services:
       - "5000:8080"
     environment:
       - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-service:8080
-      # Adicionamos aqui a ligação do Gateway para o contentor do Order Service
-      - ReverseProxy__Clusters__order-cluster__Destinations__destination1__Address=http://order-service:8080
+      - ReverseProxy__Clusters__order-cluster__LoadBalancingPolicy=RoundRobin
+      - ReverseProxy__Clusters__order-cluster__Destinations__destination1__Address=http://order-service-1:8080
+      - ReverseProxy__Clusters__order-cluster__Destinations__destination2__Address=http://order-service-2:8080
     depends_on:
       - identity-service
-      - order-service
+      - order-service-1
+      - order-service-2
 
 volumes:
   postgres_data:
