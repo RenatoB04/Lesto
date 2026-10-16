@@ -16,54 +16,82 @@ public static class DbSeeder
         {
             if (!await roleManager.RoleExistsAsync(role))
             {
-                await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+                var result = await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+                if (!result.Succeeded)
+                {
+                    throw new InvalidOperationException(
+                        $"Não foi possível criar a role {role}: {string.Join(", ", result.Errors.Select(error => error.Description))}");
+                }
             }
         }
 
-        var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
-        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
-
-        if (string.IsNullOrWhiteSpace(adminEmail) && string.IsNullOrWhiteSpace(adminPassword))
+        var seedUsers = new[]
         {
-            return;
-        }
+            new SeedUser("Administrador", "ADMIN", "Administrador Lesto"),
+            new SeedUser("Gestor", "GESTOR", "Gestor Lesto"),
+            new SeedUser("Estafeta", "ESTAFETA", "Estafeta Lesto"),
+            new SeedUser("Cliente", "CLIENTE", "Cliente Lesto")
+        };
 
-        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        foreach (var seedUser in seedUsers)
         {
-            throw new InvalidOperationException(
-                "ADMIN_EMAIL e ADMIN_PASSWORD têm de ser configurados em conjunto.");
-        }
+            var email = Environment.GetEnvironmentVariable($"{seedUser.EnvironmentPrefix}_EMAIL");
+            var password = Environment.GetEnvironmentVariable($"{seedUser.EnvironmentPrefix}_PASSWORD");
 
-        var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
-        if (existingAdmin != null)
-        {
-            if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
+            if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(password))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
                 throw new InvalidOperationException(
-                    "O utilizador configurado em ADMIN_EMAIL já existe, mas não tem a role Administrador.");
+                    $"{seedUser.EnvironmentPrefix}_EMAIL e {seedUser.EnvironmentPrefix}_PASSWORD têm de ser configurados em conjunto.");
+            }
+
+            await EnsureUserAsync(userManager, seedUser, email, password);
+        }
+    }
+
+    private static async Task EnsureUserAsync(
+        UserManager<AppUser> userManager,
+        SeedUser seedUser,
+        string email,
+        string password)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user != null)
+        {
+            if (!await userManager.IsInRoleAsync(user, seedUser.Role))
+            {
+                throw new InvalidOperationException(
+                    $"O utilizador configurado em {seedUser.EnvironmentPrefix}_EMAIL já existe, mas não tem a role {seedUser.Role}.");
             }
 
             return;
         }
 
-        var admin = new AppUser
+        user = new AppUser
         {
-            UserName = adminEmail,
-            Email = adminEmail,
-            DisplayName = "Administrador Lesto"
+            UserName = email,
+            Email = email,
+            DisplayName = seedUser.DisplayName
         };
-        var createResult = await userManager.CreateAsync(admin, adminPassword);
+
+        var createResult = await userManager.CreateAsync(user, password);
         if (!createResult.Succeeded)
         {
             throw new InvalidOperationException(
-                $"Não foi possível criar o administrador inicial: {string.Join(", ", createResult.Errors.Select(error => error.Description))}");
+                $"Não foi possível criar o utilizador {seedUser.Role}: {string.Join(", ", createResult.Errors.Select(error => error.Description))}");
         }
 
-        var roleResult = await userManager.AddToRoleAsync(admin, "Administrador");
+        var roleResult = await userManager.AddToRoleAsync(user, seedUser.Role);
         if (!roleResult.Succeeded)
         {
             throw new InvalidOperationException(
-                $"Não foi possível atribuir a role Administrador: {string.Join(", ", roleResult.Errors.Select(error => error.Description))}");
+                $"Não foi possível atribuir a role {seedUser.Role}: {string.Join(", ", roleResult.Errors.Select(error => error.Description))}");
         }
     }
+
+    private sealed record SeedUser(string Role, string EnvironmentPrefix, string DisplayName);
 }
