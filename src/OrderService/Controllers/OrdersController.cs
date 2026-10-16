@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using OrderService.Data;
 using OrderService.DTOs;
 using OrderService.Models;
@@ -17,12 +18,18 @@ public class OrdersController : ControllerBase
     private readonly OrderDbContext _context;
     private readonly IOsrmService _osrmService;
     private readonly IIdentityServiceClient _identityServiceClient;
+    private readonly ILogger<OrdersController> _logger;
 
-    public OrdersController(OrderDbContext context, IOsrmService osrmService, IIdentityServiceClient identityServiceClient)
+    public OrdersController(
+        OrderDbContext context,
+        IOsrmService osrmService,
+        IIdentityServiceClient identityServiceClient,
+        ILogger<OrdersController> logger)
     {
         _context = context;
         _osrmService = osrmService;
         _identityServiceClient = identityServiceClient;
+        _logger = logger;
     }
 
     [HttpPost]
@@ -59,7 +66,8 @@ public class OrdersController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(503, new { Message = "Erro ao calcular a rota. Tente mais tarde.", Detalhe = ex.Message });
+            _logger.LogError(ex, "Failed to calculate route while creating an order.");
+            return StatusCode(503, new { Message = "Erro ao calcular a rota. Tente mais tarde." });
         }
 
         // 4. Obter o ID do utilizador autenticado a partir do Token JWT
@@ -142,14 +150,24 @@ public class OrdersController : ControllerBase
 
         if (order == null) return NotFound(new { Message = "Encomenda não encontrada." });
 
-        // Se for Cliente, garantir que a encomenda lhe pertence
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (User.IsInRole("Cliente"))
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!Guid.TryParse(userIdString, out Guid customerId) || order.CustomerId != customerId)
             {
                 return Forbid();
             }
+        }
+        else if (User.IsInRole("Estafeta"))
+        {
+            if (!Guid.TryParse(userIdString, out Guid courierId) || order.CourierId != courierId)
+            {
+                return Forbid();
+            }
+        }
+        else if (!User.IsInRole("Gestor") && !User.IsInRole("Administrador"))
+        {
+            return Forbid();
         }
 
         return Ok(MapearParaDto(order));
