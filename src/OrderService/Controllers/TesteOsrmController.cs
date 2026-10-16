@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using OrderService.Services;
 
 namespace OrderService.Controllers;
@@ -8,10 +9,12 @@ namespace OrderService.Controllers;
 public class TesteOsrmController : ControllerBase
 {
     private readonly IOsrmService _osrmService;
+    private readonly ILogger<TesteOsrmController> _logger;
 
-    public TesteOsrmController(IOsrmService osrmService)
+    public TesteOsrmController(IOsrmService osrmService, ILogger<TesteOsrmController> logger)
     {
         _osrmService = osrmService;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -36,7 +39,8 @@ public class TesteOsrmController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new { Erro = ex.Message });
+            _logger.LogError(ex, "Failed to test the OSRM route service.");
+            return BadRequest(new { Erro = "Não foi possível testar a ligação ao serviço de rotas." });
         }
     }
 }

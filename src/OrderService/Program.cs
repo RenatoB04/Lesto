@@ -41,8 +41,11 @@ builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(cl
 builder.Services.AddControllers();
 
 // 5. Configurar Autenticação JWT
-// Adicionado um valor de recurso (fallback) para evitar que a app quebre se o .env falhar a carregar
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "LestoSuperSecretaChaveDeAutenticacao2026!";
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    throw new InvalidOperationException("JWT_SECRET não está definida.");
+}
 
 builder.Services.AddAuthentication(options =>
 {

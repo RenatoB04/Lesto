@@ -31,7 +31,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"email\": \"admin@lesto.pt\",\r\n  \"password\": \"Admin123\"\r\n}",
+                  "raw": "{\r\n  \"email\": \"{{adminEmail}}\",\r\n  \"password\": \"{{adminPassword}}\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -70,7 +70,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"email\": \"gestor@lesto.pt\",\r\n  \"password\": \"Gestor123\"\r\n}",
+                  "raw": "{\r\n  \"email\": \"{{gestorEmail}}\",\r\n  \"password\": \"{{gestorPassword}}\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -109,7 +109,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"email\": \"estafeta@lesto.pt\",\r\n  \"password\": \"Estafeta123\"\r\n}",
+                  "raw": "{\r\n  \"email\": \"{{estafetaEmail}}\",\r\n  \"password\": \"{{estafetaPassword}}\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -148,7 +148,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"email\": \"cliente@lesto.pt\",\r\n  \"password\": \"Cliente123\"\r\n}",
+                  "raw": "{\r\n  \"email\": \"{{clienteEmail}}\",\r\n  \"password\": \"{{clientePassword}}\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"

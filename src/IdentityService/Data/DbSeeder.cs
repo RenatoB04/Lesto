@@ -20,23 +20,50 @@ public static class DbSeeder
             }
         }
 
-        // Criar um utilizador para cada perfil, caso não existam
-        await CreateUserIfNotExists(userManager, "admin@lesto.pt", "Admin123", "Administrador Lesto", "Administrador");
-        await CreateUserIfNotExists(userManager, "gestor@lesto.pt", "Gestor123", "Gestor de Frota", "Gestor");
-        await CreateUserIfNotExists(userManager, "estafeta@lesto.pt", "Estafeta123", "João Estafeta", "Estafeta");
-        await CreateUserIfNotExists(userManager, "cliente@lesto.pt", "Cliente123", "Maria Cliente", "Cliente");
-    }
+        var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
+        var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
 
-    private static async Task CreateUserIfNotExists(UserManager<AppUser> userManager, string email, string password, string displayName, string role)
-    {
-        if (await userManager.FindByEmailAsync(email) == null)
+        if (string.IsNullOrWhiteSpace(adminEmail) && string.IsNullOrWhiteSpace(adminPassword))
         {
-            var user = new AppUser { UserName = email, Email = email, DisplayName = displayName };
-            var result = await userManager.CreateAsync(user, password);
-            if (result.Succeeded)
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            throw new InvalidOperationException(
+                "ADMIN_EMAIL e ADMIN_PASSWORD têm de ser configurados em conjunto.");
+        }
+
+        var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
+        if (existingAdmin != null)
+        {
+            if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
             {
-                await userManager.AddToRoleAsync(user, role);
+                throw new InvalidOperationException(
+                    "O utilizador configurado em ADMIN_EMAIL já existe, mas não tem a role Administrador.");
             }
+
+            return;
+        }
+
+        var admin = new AppUser
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            DisplayName = "Administrador Lesto"
+        };
+        var createResult = await userManager.CreateAsync(admin, adminPassword);
+        if (!createResult.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Não foi possível criar o administrador inicial: {string.Join(", ", createResult.Errors.Select(error => error.Description))}");
+        }
+
+        var roleResult = await userManager.AddToRoleAsync(admin, "Administrador");
+        if (!roleResult.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Não foi possível atribuir a role Administrador: {string.Join(", ", roleResult.Errors.Select(error => error.Description))}");
         }
     }
 }

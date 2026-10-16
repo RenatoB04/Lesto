@@ -1,7 +1,9 @@
+using System.Text.Json;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrderService.Controllers;
 using OrderService.Data;
@@ -60,7 +62,7 @@ public class OrdersControllerTests
         });
         await dbContext.SaveChangesAsync();
 
-        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object);
+        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance);
         
         // Simular que o pedido está a ser feito pelo "Estafeta Intruso"
         SetUserContext(controller, "Estafeta", estafetaIntrusoId);
@@ -84,7 +86,7 @@ public class OrdersControllerTests
         dbContext.Settings.Add(new Setting { Key = "PesoMaximoKg", Value = "30" });
         await dbContext.SaveChangesAsync();
 
-        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object);
+        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance);
         SetUserContext(controller, "Cliente", Guid.NewGuid());
 
         // Cliente tenta enviar 35kg
@@ -114,7 +116,7 @@ public class OrdersControllerTests
         dbContext.Orders.Add(new Order { Id = orderId, CourierId = estafetaId, Status = OrderStatus.Delivered });
         await dbContext.SaveChangesAsync();
 
-        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object);
+        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance);
         SetUserContext(controller, "Estafeta", estafetaId);
 
         // 2. Ação
@@ -142,7 +144,11 @@ public class OrdersControllerTests
         );
         await dbContext.SaveChangesAsync();
 
-        var controller = new OrdersController(dbContext, new Mock<IOsrmService>().Object, new Mock<IIdentityServiceClient>().Object);
+        var controller = new OrdersController(
+            dbContext,
+            new Mock<IOsrmService>().Object,
+            new Mock<IIdentityServiceClient>().Object,
+            NullLogger<OrdersController>.Instance);
         SetUserContext(controller, "Estafeta", estafetaA);
 
         var result = await controller.GetOrders(null) as OkObjectResult;
@@ -150,6 +156,36 @@ public class OrdersControllerTests
 
         Assert.NotNull(orders);
         Assert.Single(orders); // O Estafeta A só deve ver 1 encomenda
+    }
+
+    [Fact]
+    public async Task GetOrderById_EstafetaNaoAtribuido_DevolveForbid()
+    {
+        var dbContext = GetInMemoryDbContext();
+        var orderId = Guid.NewGuid();
+        var assignedCourierId = Guid.NewGuid();
+        var point = new Point { Id = Guid.NewGuid(), Name = "Sede", Latitude = 0, Longitude = 0 };
+
+        dbContext.Points.Add(point);
+        dbContext.Orders.Add(new Order
+        {
+            Id = orderId,
+            CourierId = assignedCourierId,
+            Origin = point,
+            Destination = point
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = new OrdersController(
+            dbContext,
+            new Mock<IOsrmService>().Object,
+            new Mock<IIdentityServiceClient>().Object,
+            NullLogger<OrdersController>.Instance);
+        SetUserContext(controller, "Estafeta", Guid.NewGuid());
+
+        var result = await controller.GetOrderById(orderId);
+
+        Assert.IsType<ForbidResult>(result);
     }
 
     [Fact]
@@ -165,7 +201,11 @@ public class OrdersControllerTests
         // Simular que o Identity Service diz que o ID não é um Estafeta
         mockIdentity.Setup(x => x.IsCourierAsync(It.IsAny<Guid>(), It.IsAny<string>())).ReturnsAsync(false);
 
-        var controller = new OrdersController(dbContext, new Mock<IOsrmService>().Object, mockIdentity.Object);
+        var controller = new OrdersController(
+            dbContext,
+            new Mock<IOsrmService>().Object,
+            mockIdentity.Object,
+            NullLogger<OrdersController>.Instance);
         SetUserContext(controller, "Gestor", Guid.NewGuid());
         controller.ControllerContext.HttpContext.Request.Headers["Authorization"] = "Bearer tokenFalso";
 
@@ -192,7 +232,11 @@ public class OrdersControllerTests
         // Simular o serviço OSRM a devolver distância e tempo
         mockOsrm.Setup(x => x.ObterRotaAsync(10, 10, 20, 20)).ReturnsAsync((15.5, 20.0));
 
-        var controller = new OrdersController(dbContext, mockOsrm.Object, new Mock<IIdentityServiceClient>().Object);
+        var controller = new OrdersController(
+            dbContext,
+            mockOsrm.Object,
+            new Mock<IIdentityServiceClient>().Object,
+            NullLogger<OrdersController>.Instance);
         SetUserContext(controller, "Cliente", Guid.NewGuid());
 
         var dto = new CreateOrderDto { OriginPointId = origemId, DestinationPointId = destinoId, Weight = 5 };
@@ -200,5 +244,60 @@ public class OrdersControllerTests
         var result = await controller.CreateOrder(dto);
         var createdResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, createdResult.StatusCode); // HTTP 201 Created
+    }
+
+    [Fact]
+    public async Task CreateOrder_FalhaOSRM_NaoExpoeDetalhesDaExcecao()
+    {
+        const string internalError = "upstream-secret-detail";
+        var dbContext = GetInMemoryDbContext();
+        var mockOsrm = new Mock<IOsrmService>();
+        var originId = Guid.NewGuid();
+        var destinationId = Guid.NewGuid();
+
+        dbContext.Points.AddRange(
+            new Point { Id = originId, Latitude = 10, Longitude = 10 },
+            new Point { Id = destinationId, Latitude = 20, Longitude = 20 });
+        await dbContext.SaveChangesAsync();
+        mockOsrm
+            .Setup(service => service.ObterRotaAsync(10, 10, 20, 20))
+            .ThrowsAsync(new InvalidOperationException(internalError));
+
+        var controller = new OrdersController(
+            dbContext,
+            mockOsrm.Object,
+            new Mock<IIdentityServiceClient>().Object,
+            NullLogger<OrdersController>.Instance);
+        SetUserContext(controller, "Cliente", Guid.NewGuid());
+
+        var result = await controller.CreateOrder(new CreateOrderDto
+        {
+            OriginPointId = originId,
+            DestinationPointId = destinationId,
+            Weight = 5
+        });
+
+        var response = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(503, response.StatusCode);
+        Assert.DoesNotContain(internalError, JsonSerializer.Serialize(response.Value));
+    }
+
+    [Fact]
+    public async Task TestarRota_FalhaOSRM_NaoExpoeDetalhesDaExcecao()
+    {
+        const string internalError = "upstream-secret-detail";
+        var mockOsrm = new Mock<IOsrmService>();
+        mockOsrm
+            .Setup(service => service.ObterRotaAsync(41.5614, -8.3973, 41.5503, -8.4200))
+            .ThrowsAsync(new InvalidOperationException(internalError));
+
+        var controller = new TesteOsrmController(
+            mockOsrm.Object,
+            NullLogger<TesteOsrmController>.Instance);
+
+        var result = await controller.TestarRota();
+
+        var response = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain(internalError, JsonSerializer.Serialize(response.Value));
     }
 }

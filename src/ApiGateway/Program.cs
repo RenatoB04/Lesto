@@ -9,7 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 Env.TraversePath().Load();
 
 // Configurar Autenticação JWT (Igual ao Identity)
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "LestoSuperSecretaChaveDeAutenticacao2026!";
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET");
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    throw new InvalidOperationException("JWT_SECRET não está definida.");
+}
 
 builder.Services.AddAuthentication(options =>
 {
