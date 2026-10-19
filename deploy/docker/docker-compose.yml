@@ -10,6 +10,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   identity-service:
     build:
@@ -24,7 +29,8 @@ services:
     environment:
       - DB_HOST=postgres
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   order-service-1:
     build:
@@ -42,8 +48,10 @@ services:
       - IDENTITY_API_URL=http://identity-service:8080
       - INSTANCE_NAME=order-service-1
     depends_on:
-      - postgres
-      - identity-service
+      postgres:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
 
   order-service-2:
     image: lesto-order-service
@@ -59,8 +67,12 @@ services:
       - IDENTITY_API_URL=http://identity-service:8080
       - INSTANCE_NAME=order-service-2
     depends_on:
-      - order-service-1
-      - identity-service
+      postgres:
+        condition: service_healthy
+      order-service-1:
+        condition: service_started
+      identity-service:
+        condition: service_started
 
   api-gateway:
     build:
