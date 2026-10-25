@@ -102,7 +102,15 @@ public class UsersController : ControllerBase
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
-        await _userManager.AddToRoleAsync(user, dto.Role);
+        var roleResult = await _userManager.AddToRoleAsync(user, dto.Role);
+        if (!roleResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(user);
+            return Problem(
+                title: "Não foi possível concluir a criação do utilizador.",
+                detail: "A conta não foi criada porque a role não pôde ser atribuída.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
 
         return CreatedAtAction(nameof(GetUserById), new { id = user.Id }, new { Message = "Utilizador criado com sucesso." });
     }

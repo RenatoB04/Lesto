@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace OrderService.Services;
@@ -14,10 +13,11 @@ public class IdentityServiceClient : IIdentityServiceClient
 
     public async Task<bool> IsCourierAsync(Guid userId, string token)
     {
-        // Injeta o token recebido pelo OrderService no pedido que vai para o IdentityService
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        
-        var response = await _httpClient.GetAsync($"/api/users/{userId}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/users/{userId}");
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _httpClient.SendAsync(request);
         
         if (!response.IsSuccessStatusCode)
             return false;

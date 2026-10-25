@@ -183,6 +183,9 @@ public class OrdersController : ControllerBase
         if (order.Status != OrderStatus.Pending)
             return BadRequest(new { Message = "Apenas encomendas pendentes (Pending) podem ser rejeitadas." });
 
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return BadRequest(new { Message = "A razão da rejeição é obrigatória." });
+
         order.Status = OrderStatus.Rejected;
         order.Reason = dto.Reason;
         
@@ -197,8 +200,8 @@ public class OrdersController : ControllerBase
         var order = await _context.Orders.FindAsync(id);
         if (order == null) return NotFound(new { Message = "Encomenda não encontrada." });
 
-        if (order.Status != OrderStatus.Pending)
-            return BadRequest(new { Message = "Apenas encomendas pendentes podem ser atribuídas." });
+        if (order.Status != OrderStatus.Pending && order.Status != OrderStatus.Failed)
+            return Conflict(new { Message = "Apenas encomendas pendentes ou falhadas podem ser atribuídas." });
 
         // Extrair o token do cabeçalho atual para o passar ao Identity Service
         var authHeader = Request.Headers["Authorization"].ToString();
@@ -210,7 +213,7 @@ public class OrdersController : ControllerBase
             return BadRequest(new { Message = "O utilizador selecionado não existe ou não tem o perfil de Estafeta." });
 
         order.CourierId = dto.CourierId;
-        order.Status = OrderStatus.Validated; 
+        order.Status = OrderStatus.Validated;
         
         await _context.SaveChangesAsync();
         return Ok(new { Message = "Encomenda atribuída com sucesso ao Estafeta." });
@@ -275,6 +278,9 @@ public class OrdersController : ControllerBase
 
         if (order.Status != OrderStatus.InTransit)
             return Conflict(new { Message = "Apenas encomendas em trânsito podem ser alteradas." });
+
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return BadRequest(new { Message = "A razão da falha é obrigatória." });
 
         order.Status = OrderStatus.Failed;
         order.Reason = dto.Reason; 

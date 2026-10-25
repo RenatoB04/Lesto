@@ -30,7 +30,7 @@ public class OsrmService : IOsrmService
             }
 
             // O OSRM usa a ordem Longitude,Latitude 
-            var url = $"http://router.project-osrm.org/route/v1/driving/{lonOrigem.ToString(System.Globalization.CultureInfo.InvariantCulture)},{latOrigem.ToString(System.Globalization.CultureInfo.InvariantCulture)};{lonDestino.ToString(System.Globalization.CultureInfo.InvariantCulture)},{latDestino.ToString(System.Globalization.CultureInfo.InvariantCulture)}?overview=false";
+            var url = $"route/v1/driving/{lonOrigem.ToString(System.Globalization.CultureInfo.InvariantCulture)},{latOrigem.ToString(System.Globalization.CultureInfo.InvariantCulture)};{lonDestino.ToString(System.Globalization.CultureInfo.InvariantCulture)},{latDestino.ToString(System.Globalization.CultureInfo.InvariantCulture)}?overview=false";
 
             var response = await _httpClient.GetAsync(url);
             

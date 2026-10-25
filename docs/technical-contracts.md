@@ -19,7 +19,7 @@
 | Issuer | `lesto-identity` |
 | Audience | `lesto-api` |
 | Claims | `sub`, `email`, `name`, `role` |
-| Roles | `Customer`, `Courier`, `Manager`, `Administrator` |
+| Roles | `Cliente`, `Estafeta`, `Gestor`, `Administrador` |
 
 The JWT secret is configured through `Jwt__Key`. All three backend components
 validate the same token contract. The secret must only appear in local `.env`
@@ -63,7 +63,6 @@ files or cloud configuration.
 | `POST` | `/api/orders/{id}/reject` | Manager | Rejects a pending order. |
 | `POST` | `/api/orders/{id}/assign` | Manager | Assigns a courier. |
 | `PATCH` | `/api/orders/{id}/status` | Assigned Courier | Updates delivery status. |
-| `GET` | `/api/orders/stats` | Manager, Administrator | Returns simple operational totals. |
 | `GET` | `/api/settings` | Administrator | Reads settings. |
 | `PUT` | `/api/settings` | Administrator | Changes settings. |
 | `GET` | `/health/live` | Anonymous | Liveness check. |
@@ -126,8 +125,8 @@ files or cloud configuration.
 | `Jwt__Key` | Gateway, Identity, Order | Shared development secret. |
 | `Jwt__Issuer` | Gateway, Identity, Order | `lesto-identity`. |
 | `Jwt__Audience` | Gateway, Identity, Order | `lesto-api`. |
-| `Services__Identity__BaseUrl` | Order Service | Internal Identity Service URL. |
-| `Osrm__BaseUrl` | Order Service | OSRM routing endpoint. |
+| `IDENTITY_API_URL` | Order Service | Internal Identity Service URL. |
+| `OSRM_BASE_URL` | Order Service | OSRM routing endpoint. |
 | `ASPNETCORE_URLS` | All backend containers | Kestrel listening address. |
 
 ## 7. HTTP status codes

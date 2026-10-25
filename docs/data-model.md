@@ -19,7 +19,9 @@ the standard user with `DisplayName`.
 | `DisplayName` | `string` | User-facing name. |
 | `Role` | `string` | `Customer`, `Courier`, `Manager`, or `Administrator`. |
 
-Role storage follows the standard ASP.NET Core Identity tables.
+Role storage follows the standard ASP.NET Core Identity tables. The
+implementation currently uses the Portuguese role names `Cliente`, `Estafeta`,
+`Gestor` and `Administrador`.
 
 ## 3. Order Service
 
@@ -67,7 +69,7 @@ OSRM.
 
 | Field | Type | Notes |
 |---|---|---|
-| `Key` | `string` | Primary key; initially `MaxOrderWeightKg`. |
+| `Key` | `string` | Primary key; initially `PesoMaximoKg`. |
 | `Value` | `string` | Stored configuration value. |
 
 ## 4. Entity relationship diagram

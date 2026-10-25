@@ -38,7 +38,15 @@ public class AuthController : ControllerBase
             return BadRequest(result.Errors);
 
         // O enunciado obriga a que um novo registo anónimo seja sempre Cliente
-        await _userManager.AddToRoleAsync(user, "Cliente");
+        var roleResult = await _userManager.AddToRoleAsync(user, "Cliente");
+        if (!roleResult.Succeeded)
+        {
+            await _userManager.DeleteAsync(user);
+            return Problem(
+                title: "Não foi possível concluir o registo.",
+                detail: "A conta não foi criada porque a role não pôde ser atribuída.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
 
         return Ok(new { Message = "Utilizador registado com sucesso." });
     }

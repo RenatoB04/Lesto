@@ -64,7 +64,7 @@ other remains available demonstrates basic maintenance resilience.
 
 | Environment | Runtime | Public access |
 |---|---|---|
-| Local development | Docker Compose | Gateway on `http://localhost:8080`. |
+| Local development | Docker Compose | Gateway on `http://localhost:5000`. |
 | Cloud demonstration | Linux VM with Docker Compose | Gateway on HTTPS port `8443`; restricted firewall rule. |
 
 ## 7. Architecture decisions

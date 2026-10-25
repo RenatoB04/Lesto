@@ -23,18 +23,21 @@ builder.Services.AddDbContext<OrderDbContext>(options =>
 
 // 3. Configurar os Clientes HTTP (OSRM e Identity Service)
 
-// Cliente para o OSRM (Com o User-Agent atualizado para a UPCA)
-builder.Services.AddHttpClient<IOsrmService, OsrmService>(client =>
-{
-    // O servidor partilhado do OSRM bane pedidos sem User-Agent válido
-    client.DefaultRequestHeaders.Add("User-Agent", "LestoApp_UPCA/1.0");
-});
-
 // Cliente para o Identity Service (Necessário para a validação do Estafeta)
 var identityUrl = Environment.GetEnvironmentVariable("IDENTITY_API_URL") ?? "http://localhost:5001";
 builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(client =>
 {
     client.BaseAddress = new Uri(identityUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
+var osrmBaseUrl = Environment.GetEnvironmentVariable("OSRM_BASE_URL")
+    ?? "https://router.project-osrm.org";
+builder.Services.AddHttpClient<IOsrmService, OsrmService>(client =>
+{
+    client.BaseAddress = new Uri(osrmBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(15);
+    client.DefaultRequestHeaders.Add("User-Agent", "LestoApp_UPCA/1.0");
 });
 
 // 4. Adicionar suporte para Controladores
@@ -69,6 +72,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHealthChecks();
 
 // Configurar Swagger com suporte para JWT
 builder.Services.AddEndpointsApiExplorer();
@@ -113,5 +117,6 @@ using (var scope = app.Services.CreateScope())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health/live");
 
 app.Run();

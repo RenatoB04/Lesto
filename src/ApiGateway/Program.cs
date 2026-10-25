@@ -39,6 +39,7 @@ builder.Services.AddAuthorization(options =>
     // Política por omissão exige que o utilizador esteja autenticado
     options.AddPolicy("RequireAuth", policy => policy.RequireAuthenticatedUser());
 });
+builder.Services.AddHealthChecks();
 
 // Adicionar o YARP lendo do appsettings.json
 builder.Services.AddReverseProxy()
@@ -58,5 +59,6 @@ app.UseAuthorization();
 
 // Mapear o Gateway
 app.MapReverseProxy();
+app.MapHealthChecks("/health/live");
 
 app.Run();

@@ -8,7 +8,7 @@ namespace OrderService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Qualquer utilizador autenticado pode aceder por defeito
+[Authorize(Roles = "Administrador")]
 public class SettingsController : ControllerBase
 {
     private readonly OrderDbContext _context;
@@ -20,11 +20,11 @@ public class SettingsController : ControllerBase
 
     // Obter todas as definições (Útil para a App saber as regras atuais)
     [HttpGet]
-    public async Task<IActionResult> GetSettings()
+    public async Task<IActionResult> GetSettings(CancellationToken cancellationToken)
     {
         var settings = await _context.Settings
             .Select(s => new SettingDto { Key = s.Key, Value = s.Value })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
         
         return Ok(settings);
     }
@@ -32,22 +32,24 @@ public class SettingsController : ControllerBase
     // Atualizar uma definição (Apenas o Administrador)
     [HttpPut("{key}")]
     [Authorize(Roles = "Administrador")]
-    public async Task<IActionResult> UpdateSetting(string key, [FromBody] UpdateSettingDto dto)
+    public async Task<IActionResult> UpdateSetting(string key, [FromBody] UpdateSettingDto dto, CancellationToken cancellationToken)
     {
-        var setting = await _context.Settings.FindAsync(key);
+        var setting = await _context.Settings.FindAsync(new object[] { key }, cancellationToken);
         if (setting == null)
         {
             return NotFound(new { Message = $"A definição '{key}' não foi encontrada." });
         }
 
         // Validação adicional: garantir que se for o peso, é um número válido
-        if (key == "PesoMaximoKg" && !double.TryParse(dto.Value, out _))
+        if (key == "PesoMaximoKg" &&
+            (!double.TryParse(dto.Value, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var weight) || weight <= 0))
         {
             return BadRequest(new { Message = "O valor para PesoMaximoKg tem de ser um número válido." });
         }
 
         setting.Value = dto.Value;
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         return Ok(new { Message = "Definição atualizada com sucesso." });
     }

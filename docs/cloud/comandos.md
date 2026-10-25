@@ -76,6 +76,9 @@ EOF
 
 ```
 
+> Em deployment cloud, publique apenas o Gateway. As portas internas do
+> PostgreSQL, Identity Service e Order Service não devem ser abertas no NSG.
+
 ## 3. Publicação da Stack Docker
 
 ```bash

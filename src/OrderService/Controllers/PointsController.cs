@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
 using OrderService.DTOs;
@@ -7,6 +8,7 @@ namespace OrderService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class PointsController : ControllerBase
 {
     private readonly OrderDbContext _context;
