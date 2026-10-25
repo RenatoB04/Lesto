@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OrderService.Services;
@@ -6,6 +7,7 @@ namespace OrderService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Administrador")]
 public class TesteOsrmController : ControllerBase
 {
     private readonly IOsrmService _osrmService;

@@ -215,6 +215,86 @@ public class OrdersControllerTests
     }
 
     [Fact]
+    public async Task RejectOrder_SemRazao_DevolveBadRequest()
+    {
+        var dbContext = GetInMemoryDbContext();
+        var orderId = Guid.NewGuid();
+        dbContext.Orders.Add(new Order { Id = orderId, Status = OrderStatus.Pending });
+        await dbContext.SaveChangesAsync();
+
+        var controller = new OrdersController(
+            dbContext,
+            new Mock<IOsrmService>().Object,
+            new Mock<IIdentityServiceClient>().Object,
+            NullLogger<OrdersController>.Instance);
+        SetUserContext(controller, "Gestor", Guid.NewGuid());
+
+        var result = await controller.RejectOrder(
+            orderId,
+            new RejectOrderDto { Reason = " " });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task FailOrder_SemRazao_DevolveBadRequest()
+    {
+        var dbContext = GetInMemoryDbContext();
+        var courierId = Guid.NewGuid();
+        var orderId = Guid.NewGuid();
+        dbContext.Orders.Add(new Order
+        {
+            Id = orderId,
+            CourierId = courierId,
+            Status = OrderStatus.InTransit
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = new OrdersController(
+            dbContext,
+            new Mock<IOsrmService>().Object,
+            new Mock<IIdentityServiceClient>().Object,
+            NullLogger<OrdersController>.Instance);
+        SetUserContext(controller, "Estafeta", courierId);
+
+        var result = await controller.FailOrder(
+            orderId,
+            new FailOrderDto { Reason = string.Empty });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task AssignOrder_EncomendaFalhada_PodeSerReatribuida()
+    {
+        var dbContext = GetInMemoryDbContext();
+        var mockIdentity = new Mock<IIdentityServiceClient>();
+        var orderId = Guid.NewGuid();
+        var courierId = Guid.NewGuid();
+
+        dbContext.Orders.Add(new Order { Id = orderId, Status = OrderStatus.Failed });
+        await dbContext.SaveChangesAsync();
+        mockIdentity
+            .Setup(x => x.IsCourierAsync(courierId, It.IsAny<string>()))
+            .ReturnsAsync(true);
+
+        var controller = new OrdersController(
+            dbContext,
+            new Mock<IOsrmService>().Object,
+            mockIdentity.Object,
+            NullLogger<OrdersController>.Instance);
+        SetUserContext(controller, "Gestor", Guid.NewGuid());
+        controller.ControllerContext.HttpContext.Request.Headers["Authorization"] = "Bearer test-token";
+
+        var result = await controller.AssignOrder(
+            orderId,
+            new AssignOrderDto { CourierId = courierId });
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(OrderStatus.Validated, (await dbContext.Orders.FindAsync(orderId))!.Status);
+    }
+
+    [Fact]
     public async Task CreateOrder_OSRMDevolveSucesso_GuardaEncomenda()
     {
         var dbContext = GetInMemoryDbContext();

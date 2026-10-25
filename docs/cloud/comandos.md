@@ -94,4 +94,16 @@ docker compose up api-gateway --build -d
 # Validar contentores em execução
 docker compose ps
 
+# Verificar o estado do Gateway
+curl -k https://localhost:8443/health/live
+
+# Consultar os logs recentes do Gateway
+docker compose logs --tail=100 api-gateway
+
+```
+
+Para executar os testes localmente:
+
+```powershell
+dotnet test Lesto.slnx
 ```

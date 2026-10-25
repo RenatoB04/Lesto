@@ -19,6 +19,8 @@ public class AuthControllerTests
         
         mockUserManager.Setup(x => x.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
                        .ReturnsAsync(Microsoft.AspNetCore.Identity.IdentityResult.Success);
+        mockUserManager.Setup(x => x.AddToRoleAsync(It.IsAny<AppUser>(), "Cliente"))
+                       .ReturnsAsync(Microsoft.AspNetCore.Identity.IdentityResult.Success);
 
         var controller = new AuthController(mockUserManager.Object, mockConfig.Object);
         var dto = new RegisterDto { Email = "teste@lesto.pt", Password = "123", DisplayName = "Teste" };

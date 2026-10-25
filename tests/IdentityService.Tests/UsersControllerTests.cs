@@ -43,6 +43,8 @@ public class UsersControllerTests
         mockRoleManager.Setup(x => x.RoleExistsAsync("Estafeta")).ReturnsAsync(true);
         mockUserManager.Setup(x => x.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
                        .ReturnsAsync(Microsoft.AspNetCore.Identity.IdentityResult.Success);
+        mockUserManager.Setup(x => x.AddToRoleAsync(It.IsAny<AppUser>(), "Estafeta"))
+                       .ReturnsAsync(Microsoft.AspNetCore.Identity.IdentityResult.Success);
 
         var controller = new UsersController(mockUserManager.Object, mockRoleManager.Object);
 

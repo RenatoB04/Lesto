@@ -52,8 +52,8 @@ sequenceDiagram
     Gateway->>Order: Forward manager bearer token
     Order->>Order: Validate manager role and Pending/Failed state
     Order->>Identity: GET /api/users/{courierId} (manager token)
-    Identity-->>Order: User profile and Courier role
-    Order->>Db: Store courier and set Assigned
+    Identity-->>Order: User profile and Estafeta role
+    Order->>Db: Store courier and set Validated
     Order-->>Gateway: 200 OK
     Gateway-->>Client: Updated order
 ```
@@ -67,11 +67,18 @@ sequenceDiagram
     participant Order as Order Service
     participant Db as orderdb
 
-    Client->>Gateway: PATCH /api/orders/{id}/status
+    Client->>Gateway: POST /api/orders/{id}/pickup
     Gateway->>Order: Forward courier bearer token
     Order->>Db: Load order
-    Order->>Order: Check assigned courier and transition
-    Order->>Db: Save new status and timestamps
+    Order->>Order: Check assigned courier and Validated state
+    Order->>Db: Save InTransit status
+    Order-->>Gateway: 200 OK
+    Gateway-->>Client: Updated order
+
+    Client->>Gateway: POST /api/orders/{id}/deliver or /fail
+    Gateway->>Order: Forward courier bearer token
+    Order->>Order: Check assigned courier and InTransit state
+    Order->>Db: Save Delivered or Failed status
     Order-->>Gateway: 200 OK
     Gateway-->>Client: Updated order
 ```

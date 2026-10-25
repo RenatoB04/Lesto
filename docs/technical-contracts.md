@@ -33,7 +33,7 @@ files or cloud configuration.
 | `POST` | `/api/auth/login` | Anonymous | Returns token, expiry, and user information. |
 | `GET` | `/api/users` | Manager, Administrator | Lists users; accepts `role`. |
 | `GET` | `/api/users/{id}` | Manager, Administrator | Gets one user. |
-| `POST` | `/api/users` | Administrator; Manager for Courier only | Creates a user. |
+| `POST` | `/api/users` | Administrador; Gestor for Estafeta only | Creates a user. |
 | `DELETE` | `/api/users/{id}` | Administrator | Removes a user. |
 | `GET` | `/health/live` | Anonymous | Liveness check. |
 
@@ -59,10 +59,12 @@ files or cloud configuration.
 | `GET` | `/api/points` | Authenticated | Lists active catalogue points. |
 | `POST` | `/api/orders` | Customer | Creates an order. |
 | `GET` | `/api/orders` | Authenticated | Returns orders filtered by caller role; Manager and Administrator may use `status`. |
-| `GET` | `/api/orders/{id}` | Owner, assigned Courier, Manager, Administrator | Returns one order. |
+| `GET` | `/api/orders/{id}` | Owner, assigned Estafeta, Gestor, Administrador | Returns one order. |
 | `POST` | `/api/orders/{id}/reject` | Manager | Rejects a pending order. |
 | `POST` | `/api/orders/{id}/assign` | Manager | Assigns a courier. |
-| `PATCH` | `/api/orders/{id}/status` | Assigned Courier | Updates delivery status. |
+| `POST` | `/api/orders/{id}/pickup` | Assigned Estafeta | Moves an assigned order to `InTransit`. |
+| `POST` | `/api/orders/{id}/deliver` | Assigned Estafeta | Completes an in-transit order. |
+| `POST` | `/api/orders/{id}/fail` | Assigned Estafeta | Marks an in-transit order as failed. |
 | `GET` | `/api/settings` | Administrator | Reads settings. |
 | `PUT` | `/api/settings` | Administrator | Changes settings. |
 | `GET` | `/health/live` | Anonymous | Liveness check. |
@@ -96,7 +98,7 @@ files or cloud configuration.
 {
   "byStatus": {
     "Pending": 2,
-    "Assigned": 1,
+    "Validated": 1,
     "InTransit": 1,
     "Delivered": 8,
     "Failed": 1,

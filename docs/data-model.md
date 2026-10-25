@@ -17,7 +17,7 @@ the standard user with `DisplayName`.
 | `Id` | `Guid` | Primary key. |
 | `Email` | `string` | Unique login identifier. |
 | `DisplayName` | `string` | User-facing name. |
-| `Role` | `string` | `Customer`, `Courier`, `Manager`, or `Administrator`. |
+| `Role` | `string` | `Cliente`, `Estafeta`, `Gestor`, or `Administrador`. |
 
 Role storage follows the standard ASP.NET Core Identity tables. The
 implementation currently uses the Portuguese role names `Cliente`, `Estafeta`,

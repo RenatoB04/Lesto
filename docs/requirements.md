@@ -25,7 +25,7 @@ from a pre-defined catalogue of delivery points.
 ### Courier
 
 - **FR-COU-01** — View only orders assigned to the authenticated courier.
-- **FR-COU-02** — Change an assigned order from `Assigned` to `InTransit`.
+- **FR-COU-02** — Move a validated assigned order to `InTransit`.
 - **FR-COU-03** — Complete an in-transit order as `Delivered` or `Failed`.
   A failed delivery requires a reason.
 
@@ -47,11 +47,11 @@ from a pre-defined catalogue of delivery points.
 ## 3. Business rules
 
 - An order can only be created when its weight is less than or equal to
-  `MaxOrderWeightKg`.
+  `PesoMaximoKg`.
 - An order is created with the `Pending` status.
 - Only a manager can reject or assign an order.
 - A rejection and a failed delivery always require a non-empty reason.
-- An order can only be assigned to a user whose role is `Courier`.
+- An order can only be assigned to a user whose role is `Estafeta`.
 - Only the assigned courier can update an order status.
 - Customer access is restricted to the customer's own orders. Courier access is
   restricted to assigned orders. Managers and administrators can view all
@@ -64,11 +64,11 @@ from a pre-defined catalogue of delivery points.
 |---|---|---|---|
 | New | `Pending` | Customer | Order weight is valid. |
 | `Pending` | `Rejected` | Manager | A rejection reason is supplied. |
-| `Pending` | `Assigned` | Manager | Target user is a courier. |
-| `Failed` | `Assigned` | Manager | Target user is a courier. |
-| `Assigned` | `InTransit` | Assigned courier | — |
-| `InTransit` | `Delivered` | Assigned courier | — |
-| `InTransit` | `Failed` | Assigned courier | A failure reason is supplied. |
+| `Pending` | `Validated` | Manager | Target user is an `Estafeta`. |
+| `Failed` | `Validated` | Manager | Target user is an `Estafeta`. |
+| `Validated` | `InTransit` | Assigned `Estafeta` | — |
+| `InTransit` | `Delivered` | Assigned `Estafeta` | — |
+| `InTransit` | `Failed` | Assigned `Estafeta` | A failure reason is supplied. |
 
 ## 5. Non-functional requirements
 
@@ -94,7 +94,7 @@ from a pre-defined catalogue of delivery points.
 3. On order creation, Order Service calls OSRM with the coordinates of the
    selected catalogue points to calculate distance and duration.
 4. During assignment, Order Service calls Identity Service with the manager's
-   bearer token to confirm that the selected user has the `Courier` role.
+   bearer token to confirm that the selected user has the `Estafeta` role.
 5. Order Service persists the delivery lifecycle in its own database.
 
 ## 7. Out of scope
