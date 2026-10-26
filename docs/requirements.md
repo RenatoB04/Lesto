@@ -8,8 +8,8 @@ documented REST API.
 
 The project is intentionally limited to the academic scope. Payments are
 processed through Stripe in test mode only (no real money). It does not provide
-real-time courier tracking, accept free-text address geocoding, or optimise
-delivery routes. Origins and destinations are selected
+real-time courier tracking or optimise delivery routes. Free-text addresses are
+geocoded with Nominatim (OpenStreetMap). Origins and destinations are selected
 from a pre-defined catalogue of delivery points.
 
 ## 2. Actors and functional requirements
@@ -17,8 +17,11 @@ from a pre-defined catalogue of delivery points.
 ### Customer
 
 - **FR-CUS-01** — Register an account and sign in.
-- **FR-CUS-02** — Create an order by selecting an origin and destination point,
-  entering weight, type, description, and recipient details.
+- **FR-CUS-02** — Create an order by choosing, for both origin and destination,
+  either a catalogue point or a free-text address, and entering weight, type,
+  description, and recipient details.
+- **FR-CUS-07** — Preview a free-text address (matched place and coordinates)
+  before creating the order.
 - **FR-CUS-03** — View only orders created by the authenticated customer.
 - **FR-CUS-04** — View the current status, calculated distance, duration, and
   failure or rejection reason of an order when applicable.
@@ -74,6 +77,13 @@ from a pre-defined catalogue of delivery points.
   the assignment returns `409 Conflict`.
 - Only a customer can pay, and only for their own `Pending`, `Unpaid` orders.
 - Only a rejected order with a confirmed payment can be refunded.
+- Each side of an order (origin, destination) takes exactly one of a catalogue
+  point id or a free-text address; otherwise `400 Bad Request`.
+- Free-text addresses are geocoded only in Portugal, are limited to 200
+  characters, and are stored as non-catalogue points. An address that is not
+  found returns `422 Unprocessable Entity`.
+- The public point list (`GET /api/points`) returns only catalogue points;
+  customer addresses are visible only through the orders they belong to.
 
 ## 4. Order state model
 
@@ -96,8 +106,9 @@ from a pre-defined catalogue of delivery points.
   databases; no service accesses another service's database.
 - **NFR-03 — Availability.** If OSRM is unavailable, the order service returns
   a controlled error and does not persist a partially calculated order. If
-  Stripe or the Order Service is unavailable, the Payment Service returns
-  `503` and nothing is persisted. A lost Stripe webhook is recovered by querying
+  Nominatim is unavailable, order creation with an address returns `503` and
+  nothing is persisted. If Stripe or the Order Service is unavailable, the
+  Payment Service returns `503` and nothing is persisted. A lost Stripe webhook is recovered by querying
   Stripe on the return page or on `GET /api/payments/{orderId}`.
 - **NFR-04 — Scalability.** The Order Service can run as two stateless
   containers behind the API Gateway.
@@ -111,8 +122,9 @@ from a pre-defined catalogue of delivery points.
 1. API consumers send all requests to the API Gateway.
 2. The Gateway authenticates protected requests and forwards them to Identity
    Service or Order Service.
-3. On order creation, Order Service calls OSRM with the coordinates of the
-   selected catalogue points to calculate distance and duration.
+3. On order creation, Order Service geocodes any free-text address with
+   Nominatim (reusing previously geocoded addresses), then calls OSRM with the
+   coordinates to calculate distance and duration.
 4. During assignment, Order Service calls Identity Service with the manager's
    bearer token to confirm that the selected user has the `Estafeta` role.
 5. Order Service persists the delivery lifecycle in its own database.
@@ -127,7 +139,6 @@ from a pre-defined catalogue of delivery points.
 
 - Real payments (live Stripe keys) and invoicing.
 - Real-time location tracking or GPS history.
-- Free-text address geocoding.
 - Route optimisation.
 - Email notifications and asynchronous messaging.
 - Kubernetes, automatic scaling, and CI/CD pipelines.

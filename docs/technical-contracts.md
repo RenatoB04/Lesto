@@ -56,7 +56,8 @@ files or cloud configuration.
 
 | Method | Endpoint | Roles | Description |
 |---|---|---|---|
-| `GET` | `/api/points` | Authenticated | Lists active catalogue points. |
+| `GET` | `/api/points` | Authenticated | Lists catalogue points only (customer addresses are never listed). |
+| `GET` | `/api/geocode?q=...` | Cliente | Previews an address: returns `query`, `displayName`, `latitude`, `longitude`; `404` if not found. |
 | `POST` | `/api/orders` | Customer | Creates an order. |
 | `GET` | `/api/orders` | Authenticated | Returns orders filtered by caller role; Manager and Administrator may use `status`. |
 | `GET` | `/api/orders/{id}` | Owner, assigned Estafeta, Gestor, Administrador | Returns one order. |
@@ -80,6 +81,18 @@ files or cloud configuration.
   "description": "Small box",
   "recipientName": "Example Recipient",
   "recipientPhone": "+351900000000"
+}
+```
+
+Each side accepts either a point id or an address (exactly one):
+
+```json
+{
+  "originAddress": "Avenida da Liberdade, Braga",
+  "destinationPointId": "00000000-0000-0000-0000-000000000002",
+  "weight": 3,
+  "type": "Normal",
+  "recipientData": "Example Recipient"
 }
 ```
 
@@ -155,6 +168,7 @@ otherwise they return `401` (`503` if the key is not configured).
 | `/api/orders/` | Order Service |
 | `/api/points/` | Order Service |
 | `/api/settings/` | Order Service |
+| `/api/geocode/` | Order Service |
 | `/api/payments/webhook` | Payment Service (anonymous; Stripe signature checked by the service) |
 | `/api/payments/return/` | Payment Service (anonymous) |
 | `/api/payments/` | Payment Service (authenticated) |
@@ -170,6 +184,7 @@ otherwise they return `401` (`503` if the key is not configured).
 | `Jwt__Audience` | Gateway, Identity, Order | `lesto-api`. |
 | `IDENTITY_API_URL` | Order Service | Internal Identity Service URL. |
 | `OSRM_BASE_URL` | Order Service | OSRM routing endpoint. |
+| `NOMINATIM_BASE_URL` | Order Service | Nominatim endpoint (default `https://nominatim.openstreetmap.org`). |
 | `STRIPE_SECRET_KEY` | Payment Service | Stripe test secret key (`sk_test_...`); live keys are refused. |
 | `STRIPE_WEBHOOK_SECRET` | Payment Service | Webhook signing secret (`whsec_...`), e.g. from `stripe listen --print-secret`. |
 | `INTERNAL_API_KEY` | Order, Payment | Shared key for `/internal/...` endpoints. |
@@ -187,5 +202,6 @@ otherwise they return `401` (`503` if the key is not configured).
 | `401 Unauthorized` | Missing, invalid, or expired token. |
 | `403 Forbidden` | Authenticated user lacks permission. |
 | `404 Not Found` | Requested resource does not exist or is inaccessible. |
+| `422 Unprocessable Entity` | Free-text address not found by the geocoder. |
 | `409 Conflict` | Invalid order or payment state (e.g. assigning an unpaid order). |
-| `503 Service Unavailable` | OSRM, Stripe, or Order Service unavailable. |
+| `503 Service Unavailable` | OSRM, Nominatim, Stripe, or Order Service unavailable. |

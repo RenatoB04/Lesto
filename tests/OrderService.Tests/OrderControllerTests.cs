@@ -62,7 +62,7 @@ public class OrdersControllerTests
         });
         await dbContext.SaveChangesAsync();
 
-        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance);
+        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         
         // Simular que o pedido está a ser feito pelo "Estafeta Intruso"
         SetUserContext(controller, "Estafeta", estafetaIntrusoId);
@@ -86,7 +86,7 @@ public class OrdersControllerTests
         dbContext.Settings.Add(new Setting { Key = "PesoMaximoKg", Value = "30" });
         await dbContext.SaveChangesAsync();
 
-        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance);
+        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Cliente", Guid.NewGuid());
 
         // Cliente tenta enviar 35kg
@@ -116,7 +116,7 @@ public class OrdersControllerTests
         dbContext.Orders.Add(new Order { Id = orderId, CourierId = estafetaId, Status = OrderStatus.Delivered });
         await dbContext.SaveChangesAsync();
 
-        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance);
+        var controller = new OrdersController(dbContext, mockOsrm.Object, mockIdentity.Object, NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Estafeta", estafetaId);
 
         // 2. Ação
@@ -148,7 +148,7 @@ public class OrdersControllerTests
             dbContext,
             new Mock<IOsrmService>().Object,
             new Mock<IIdentityServiceClient>().Object,
-            NullLogger<OrdersController>.Instance);
+            NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Estafeta", estafetaA);
 
         var result = await controller.GetOrders(null) as OkObjectResult;
@@ -180,7 +180,7 @@ public class OrdersControllerTests
             dbContext,
             new Mock<IOsrmService>().Object,
             new Mock<IIdentityServiceClient>().Object,
-            NullLogger<OrdersController>.Instance);
+            NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Estafeta", Guid.NewGuid());
 
         var result = await controller.GetOrderById(orderId);
@@ -205,7 +205,7 @@ public class OrdersControllerTests
             dbContext,
             new Mock<IOsrmService>().Object,
             mockIdentity.Object,
-            NullLogger<OrdersController>.Instance);
+            NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Gestor", Guid.NewGuid());
         controller.ControllerContext.HttpContext.Request.Headers["Authorization"] = "Bearer tokenFalso";
 
@@ -226,7 +226,7 @@ public class OrdersControllerTests
             dbContext,
             new Mock<IOsrmService>().Object,
             new Mock<IIdentityServiceClient>().Object,
-            NullLogger<OrdersController>.Instance);
+            NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Gestor", Guid.NewGuid());
 
         var result = await controller.RejectOrder(
@@ -254,7 +254,7 @@ public class OrdersControllerTests
             dbContext,
             new Mock<IOsrmService>().Object,
             new Mock<IIdentityServiceClient>().Object,
-            NullLogger<OrdersController>.Instance);
+            NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Estafeta", courierId);
 
         var result = await controller.FailOrder(
@@ -282,7 +282,7 @@ public class OrdersControllerTests
             dbContext,
             new Mock<IOsrmService>().Object,
             mockIdentity.Object,
-            NullLogger<OrdersController>.Instance);
+            NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Gestor", Guid.NewGuid());
         controller.ControllerContext.HttpContext.Request.Headers["Authorization"] = "Bearer test-token";
 
@@ -303,8 +303,8 @@ public class OrdersControllerTests
         var origemId = Guid.NewGuid();
         var destinoId = Guid.NewGuid();
         dbContext.Points.AddRange(
-            new Point { Id = origemId, Latitude = 10, Longitude = 10 },
-            new Point { Id = destinoId, Latitude = 20, Longitude = 20 }
+            new Point { Id = origemId, IsCatalog = true, Latitude = 10, Longitude = 10 },
+            new Point { Id = destinoId, IsCatalog = true, Latitude = 20, Longitude = 20 }
         );
         dbContext.Settings.Add(new Setting { Key = "PesoMaximoKg", Value = "30" });
         await dbContext.SaveChangesAsync();
@@ -316,7 +316,7 @@ public class OrdersControllerTests
             dbContext,
             mockOsrm.Object,
             new Mock<IIdentityServiceClient>().Object,
-            NullLogger<OrdersController>.Instance);
+            NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Cliente", Guid.NewGuid());
 
         var dto = new CreateOrderDto { OriginPointId = origemId, DestinationPointId = destinoId, Weight = 5 };
@@ -336,8 +336,8 @@ public class OrdersControllerTests
         var destinationId = Guid.NewGuid();
 
         dbContext.Points.AddRange(
-            new Point { Id = originId, Latitude = 10, Longitude = 10 },
-            new Point { Id = destinationId, Latitude = 20, Longitude = 20 });
+            new Point { Id = originId, IsCatalog = true, Latitude = 10, Longitude = 10 },
+            new Point { Id = destinationId, IsCatalog = true, Latitude = 20, Longitude = 20 });
         await dbContext.SaveChangesAsync();
         mockOsrm
             .Setup(service => service.ObterRotaAsync(10, 10, 20, 20))
@@ -347,7 +347,7 @@ public class OrdersControllerTests
             dbContext,
             mockOsrm.Object,
             new Mock<IIdentityServiceClient>().Object,
-            NullLogger<OrdersController>.Instance);
+            NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         SetUserContext(controller, "Cliente", Guid.NewGuid());
 
         var result = await controller.CreateOrder(new CreateOrderDto

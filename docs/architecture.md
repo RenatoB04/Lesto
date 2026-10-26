@@ -16,6 +16,7 @@ flowchart LR
     Identity --> IdentityDb[("identitydb\nPostgreSQL")]
     Order --> OrderDb[("orderdb\nPostgreSQL")]
     Order -->|HTTPS / REST| Osrm["OSRM public routing service"]
+    Order -->|HTTPS / REST| Nominatim["Nominatim geocoding (OpenStreetMap)"]
     Gateway -->|REST| Payment["Payment Service"]
     Payment -->|REST, internal network\nX-Internal-Key| Order
     Payment --> PaymentDb[("paymentdb\nPostgreSQL")]
@@ -32,6 +33,7 @@ flowchart LR
 | Order Service | Delivery points, orders, order state machine, weight setting, and statistics. | No | `orderdb`. |
 | Payment Service | Stripe Checkout sessions, payment confirmation (webhook and query), refunds. | No | `paymentdb`. |
 | OSRM | External route distance and duration calculation. | External provider | None. |
+| Nominatim | External geocoding of free-text addresses (Portugal only). | External provider | None. |
 | Stripe | External payment processing in test mode. | External provider | Card data stays at Stripe. |
 
 One PostgreSQL container hosts three logical databases during development:
@@ -44,7 +46,8 @@ One PostgreSQL container hosts three logical databases during development:
   private Docker network.
 - Order Service calls Identity Service only to validate a selected courier at
   assignment time.
-- Order Service calls OSRM only after both catalogue points have been selected.
+- Order Service calls Nominatim only for free-text addresses that were not
+  geocoded before, then calls OSRM with the resolved coordinates.
 - Payment Service calls Order Service's internal endpoints
   (`/internal/orders/{id}` and `/internal/orders/{id}/payment`) with the
   `X-Internal-Key` header. These endpoints have no Gateway route.
@@ -85,8 +88,9 @@ other remains available demonstrates basic maintenance resilience.
 - Three business services (Identity, Order, Payment) demonstrate a
   microservices design with separate data ownership and service-to-service
   calls in both directions of trust (user token and internal key).
-- A pre-defined point catalogue avoids sending personal delivery addresses to
-  public geocoding services.
+- The point catalogue is kept, and free-text addresses are offered as an
+  alternative; only the address text is sent to Nominatim, never the customer's
+  identity.
 - OSRM provides a relevant external integration without route optimisation.
 - Docker Compose is used instead of Kubernetes because the assignment asks for
   scalability and maintenance scenarios but does not mandate Kubernetes.

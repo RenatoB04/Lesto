@@ -40,6 +40,14 @@ OSRM.
 | `Longitude` | `decimal` | WGS84 longitude. |
 | `IsActive` | `bool` | Controls whether the point can be selected. |
 
+Implemented `Point` fields for free-text addresses:
+
+| Field | Type | Notes |
+|---|---|---|
+| `IsCatalog` | `bool` | `true` for the seeded catalogue; `false` for points created from a customer address. |
+| `Address` | `string?` | Normalised address typed by the customer (used to reuse the point). |
+| `Name` | `string` | For address points, the place name returned by Nominatim. |
+
 ### DeliveryOrder
 
 | Field | Type | Notes |

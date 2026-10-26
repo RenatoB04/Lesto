@@ -19,17 +19,20 @@ public class OrdersController : ControllerBase
     private readonly IOsrmService _osrmService;
     private readonly IIdentityServiceClient _identityServiceClient;
     private readonly ILogger<OrdersController> _logger;
+    private readonly IGeocodingService _geocodingService;
 
     public OrdersController(
         OrderDbContext context,
         IOsrmService osrmService,
         IIdentityServiceClient identityServiceClient,
-        ILogger<OrdersController> logger)
+        ILogger<OrdersController> logger,
+        IGeocodingService geocodingService)
     {
         _context = context;
         _osrmService = osrmService;
         _identityServiceClient = identityServiceClient;
         _logger = logger;
+        _geocodingService = geocodingService;
     }
 
     [HttpPost]
@@ -46,21 +49,19 @@ public class OrdersController : ControllerBase
             }
         }
 
-        // 2. Obter as coordenadas de Origem e Destino
-        var origem = await _context.Points.FindAsync(dto.OriginPointId);
-        var destino = await _context.Points.FindAsync(dto.DestinationPointId);
+        // 2. Obter as coordenadas de Origem e Destino (ponto do catálogo ou morada)
+        var (origem, erroOrigem) = await ResolverPontoAsync(dto.OriginPointId, dto.OriginAddress, "origem");
+        if (erroOrigem != null) return erroOrigem;
 
-        if (origem == null || destino == null)
-        {
-            return BadRequest(new { Message = "Ponto de origem ou destino inválido." });
-        }
+        var (destino, erroDestino) = await ResolverPontoAsync(dto.DestinationPointId, dto.DestinationAddress, "destino");
+        if (erroDestino != null) return erroDestino;
 
         // 3. Obter Distância e Duração reais através do OSRM
         double distancia = 0;
         double duracao = 0;
         try
         {
-            var rota = await _osrmService.ObterRotaAsync(origem.Latitude, origem.Longitude, destino.Latitude, destino.Longitude);
+            var rota = await _osrmService.ObterRotaAsync(origem!.Latitude, origem.Longitude, destino!.Latitude, destino.Longitude);
             distancia = rota.DistanciaKm;
             duracao = rota.DuracaoMin;
         }
@@ -83,12 +84,12 @@ public class OrdersController : ControllerBase
         var precoKg = await LerDefinicaoDecimalAsync(PricingCalculator.PerKgKey, PricingCalculator.DefaultPerKg);
         var preco = PricingCalculator.Calculate(distancia, dto.Weight, precoBase, precoKm, precoKg);
 
-        // 6. Criar e guardar a encomenda (fica por pagar)
+        // 6. Criar e guardar a encomenda (fica por pagar); os pontos novos são guardados em conjunto
         var order = new Order
         {
             CustomerId = customerId,
-            OriginPointId = origem.Id,
-            DestinationPointId = destino.Id,
+            Origin = origem!,
+            Destination = destino!,
             Weight = dto.Weight,
             Type = dto.Type,
             RecipientData = dto.RecipientData,
@@ -299,6 +300,55 @@ public class OrdersController : ControllerBase
         
         await _context.SaveChangesAsync();
         return Ok(new { Message = "Falha na entrega registada." });
+    }
+
+    // Método auxiliar para obter o ponto a partir do catálogo ou de uma morada em texto livre
+    private async Task<(Point? Ponto, IActionResult? Erro)> ResolverPontoAsync(Guid? pointId, string? address, string lado)
+    {
+        var temMorada = !string.IsNullOrWhiteSpace(address);
+        if (pointId.HasValue == temMorada)
+            return (null, BadRequest(new { Message = $"Indique o ponto ou a morada de {lado} (apenas um dos dois)." }));
+
+        // Ponto do catálogo
+        if (pointId.HasValue)
+        {
+            var ponto = await _context.Points.FirstOrDefaultAsync(p => p.Id == pointId.Value && p.IsCatalog);
+            return ponto == null
+                ? (null, BadRequest(new { Message = $"Ponto de {lado} inválido." }))
+                : (ponto, null);
+        }
+
+        // Morada em texto livre
+        var morada = GeocodeController.NormalizarMorada(address);
+        if (morada == null)
+            return (null, BadRequest(new { Message = $"A morada de {lado} tem de ter até {GeocodeController.MaxAddressLength} caracteres." }));
+
+        // Reutilizar uma morada já geocodificada (evita pedidos repetidos ao Nominatim)
+        var existente = await _context.Points.FirstOrDefaultAsync(p => !p.IsCatalog && p.Address == morada);
+        if (existente != null) return (existente, null);
+
+        GeocodingResult? resultado;
+        try
+        {
+            resultado = await _geocodingService.GeocodeAsync(morada);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to geocode an address while creating an order.");
+            return (null, StatusCode(503, new { Message = "Serviço de moradas indisponível. Tente mais tarde." }));
+        }
+
+        if (resultado == null)
+            return (null, UnprocessableEntity(new { Message = $"Morada de {lado} não encontrada." }));
+
+        return (new Point
+        {
+            Name = resultado.DisplayName.Length > 200 ? resultado.DisplayName[..200] : resultado.DisplayName,
+            Address = morada,
+            Latitude = resultado.Latitude,
+            Longitude = resultado.Longitude,
+            IsCatalog = false
+        }, null);
     }
 
     // Método auxiliar para ler uma definição numérica (usa o valor por omissão se não existir)

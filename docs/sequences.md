@@ -132,3 +132,27 @@ sequenceDiagram
     Payment->>Order: POST /internal/orders/{id}/payment {Refunded}
     Payment-->>Client: 200 OK
 ```
+
+## 7. Create order with free-text addresses
+
+```mermaid
+sequenceDiagram
+    participant Client as API Client
+    participant Gateway as API Gateway
+    participant Order as Order Service
+    participant Db as orderdb
+    participant Nominatim as Nominatim
+    participant OSRM as OSRM
+
+    Client->>Gateway: POST /api/orders {originAddress, destinationAddress}
+    Gateway->>Order: Forward authenticated request
+    Order->>Db: Look for an already geocoded address
+    alt Address not stored yet
+        Order->>Nominatim: /search?q=...&countrycodes=pt (1 request/second)
+        Nominatim-->>Order: lat, lon, display_name
+    end
+    Order->>OSRM: Route request with the coordinates
+    OSRM-->>Order: Distance and duration
+    Order->>Db: Save new points and the Pending order (one transaction)
+    Order-->>Client: 201 Created (orderId, price)
+```
