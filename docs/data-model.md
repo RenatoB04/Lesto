@@ -2,7 +2,7 @@
 
 ## 1. Boundaries
 
-Identity Service and Order Service use separate PostgreSQL databases. There are
+Identity Service, Order Service, and Payment Service use separate PostgreSQL databases. There are
 no foreign keys between services. Order Service stores selected user details as
 a snapshot where needed, so an Identity user deletion does not invalidate past
 orders.
@@ -65,14 +65,43 @@ OSRM.
 | `DeliveredAt` | `DateTimeOffset?` | UTC timestamp. |
 | `UpdatedAt` | `DateTimeOffset` | UTC timestamp. |
 
+Payment fields added to the order:
+
+| Field | Type | Notes |
+|---|---|---|
+| `Price` | `numeric(10,2)` | Price in EUR, calculated at creation time. |
+| `PaymentStatus` | `int` (enum) | `Unpaid`, `Paid`, or `Refunded`; changed only by Payment Service. |
+| `PaidAt` | `DateTime?` | UTC timestamp of the payment confirmation. |
+
 ### SystemSetting
 
 | Field | Type | Notes |
 |---|---|---|
-| `Key` | `string` | Primary key; initially `PesoMaximoKg`. |
+| `Key` | `string` | Primary key; seeded with `PesoMaximoKg`, `PrecoBaseEur`, `PrecoPorKmEur`, and `PrecoPorKgEur`. |
 | `Value` | `string` | Stored configuration value. |
 
-## 4. Entity relationship diagram
+## 4. Payment Service
+
+### Payment
+
+One row per payment attempt (Stripe Checkout Session). An order can have
+several attempts, but at most one reaches `Paid`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `Id` | `Guid` | Primary key; also sent to Stripe as metadata. |
+| `OrderId` | `Guid` | Order identifier; no cross-service foreign key. Indexed. |
+| `CustomerId` | `Guid` | Identity user who started the payment. |
+| `AmountCents` | `long` | Amount in cents, as Stripe expects. |
+| `Currency` | `string(3)` | `eur`. |
+| `StripeSessionId` | `string` | Checkout Session id; unique index. |
+| `StripePaymentIntentId` | `string?` | Needed for refunds. |
+| `Status` | `string` | `Pending`, `Paid`, `Expired`, or `Refunded`. |
+| `CreatedAt` | `DateTime` | UTC timestamp. |
+| `PaidAt` | `DateTime?` | UTC timestamp. |
+| `RefundedAt` | `DateTime?` | UTC timestamp. |
+
+## 5. Entity relationship diagram
 
 ```mermaid
 erDiagram
@@ -104,7 +133,7 @@ erDiagram
     }
 ```
 
-## 5. Data conventions
+## 6. Data conventions
 
 - All identifiers use `Guid`.
 - All timestamps use `DateTimeOffset` in UTC.

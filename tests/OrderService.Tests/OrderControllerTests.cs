@@ -195,7 +195,7 @@ public class OrdersControllerTests
         var mockIdentity = new Mock<IIdentityServiceClient>();
         var orderId = Guid.NewGuid();
 
-        dbContext.Orders.Add(new Order { Id = orderId, Status = OrderStatus.Pending });
+        dbContext.Orders.Add(new Order { Id = orderId, Status = OrderStatus.Pending, PaymentStatus = PaymentStatus.Paid });
         await dbContext.SaveChangesAsync();
 
         // Simular que o Identity Service diz que o ID não é um Estafeta
@@ -272,7 +272,7 @@ public class OrdersControllerTests
         var orderId = Guid.NewGuid();
         var courierId = Guid.NewGuid();
 
-        dbContext.Orders.Add(new Order { Id = orderId, Status = OrderStatus.Failed });
+        dbContext.Orders.Add(new Order { Id = orderId, Status = OrderStatus.Failed, PaymentStatus = PaymentStatus.Paid });
         await dbContext.SaveChangesAsync();
         mockIdentity
             .Setup(x => x.IsCourierAsync(courierId, It.IsAny<string>()))

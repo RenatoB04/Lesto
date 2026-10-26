@@ -6,9 +6,10 @@ Lesto is a distributed last-mile delivery management system. It supports the
 delivery lifecycle from order creation to its final outcome through a secured,
 documented REST API.
 
-The project is intentionally limited to the academic scope. It does not process
-payments, provide real-time courier tracking, accept free-text address
-geocoding, or optimise delivery routes. Origins and destinations are selected
+The project is intentionally limited to the academic scope. Payments are
+processed through Stripe in test mode only (no real money). It does not provide
+real-time courier tracking, accept free-text address geocoding, or optimise
+delivery routes. Origins and destinations are selected
 from a pre-defined catalogue of delivery points.
 
 ## 2. Actors and functional requirements
@@ -21,6 +22,10 @@ from a pre-defined catalogue of delivery points.
 - **FR-CUS-03** — View only orders created by the authenticated customer.
 - **FR-CUS-04** — View the current status, calculated distance, duration, and
   failure or rejection reason of an order when applicable.
+- **FR-CUS-05** — See the price of an order, calculated at creation time from a
+  base fee, the route distance, and the weight.
+- **FR-CUS-06** — Pay a pending order through a Stripe Checkout page and check
+  the payment status.
 
 ### Courier
 
@@ -37,12 +42,16 @@ from a pre-defined catalogue of delivery points.
 - **FR-MAN-04** — Assign a pending or failed order to a valid courier.
 - **FR-MAN-05** — View simple operational data: order totals by status and the
   total number of failed deliveries.
+- **FR-MAN-06** — View the payment status of any order and refund the payment
+  of a rejected order.
 
 ### Administrator
 
 - **FR-ADM-01** — Create users with any role.
 - **FR-ADM-02** — Remove users.
 - **FR-ADM-03** — View and change the maximum allowed order weight.
+- **FR-ADM-04** — View and change the pricing settings `PrecoBaseEur`,
+  `PrecoPorKmEur`, and `PrecoPorKgEur`.
 
 ## 3. Business rules
 
@@ -57,6 +66,14 @@ from a pre-defined catalogue of delivery points.
   restricted to assigned orders. Managers and administrators can view all
   orders.
 - Invalid state transitions return `409 Conflict`.
+- An order price is `PrecoBaseEur + km × PrecoPorKmEur + kg × PrecoPorKgEur`,
+  rounded to cents, with a minimum of 0.50 EUR (Stripe's minimum charge).
+- An order is created with payment status `Unpaid`. Only the Payment Service can
+  change it, to `Paid` or from `Paid` to `Refunded`.
+- An order can only be assigned to a courier after it has been paid; otherwise
+  the assignment returns `409 Conflict`.
+- Only a customer can pay, and only for their own `Pending`, `Unpaid` orders.
+- Only a rejected order with a confirmed payment can be refunded.
 
 ## 4. Order state model
 
@@ -64,8 +81,8 @@ from a pre-defined catalogue of delivery points.
 |---|---|---|---|
 | New | `Pending` | Customer | Order weight is valid. |
 | `Pending` | `Rejected` | Manager | A rejection reason is supplied. |
-| `Pending` | `Validated` | Manager | Target user is an `Estafeta`. |
-| `Failed` | `Validated` | Manager | Target user is an `Estafeta`. |
+| `Pending` | `Validated` | Manager | Target user is an `Estafeta` and the order is `Paid`. |
+| `Failed` | `Validated` | Manager | Target user is an `Estafeta` and the order is `Paid`. |
 | `Validated` | `InTransit` | Assigned `Estafeta` | — |
 | `InTransit` | `Delivered` | Assigned `Estafeta` | — |
 | `InTransit` | `Failed` | Assigned `Estafeta` | A failure reason is supplied. |
@@ -75,10 +92,13 @@ from a pre-defined catalogue of delivery points.
 - **NFR-01 — Security.** The system uses JWT authentication, role-based
   authorization, HTTPS at the public gateway, and secrets that are not stored
   in source control.
-- **NFR-02 — Service isolation.** Identity and Order own separate databases;
-  neither service accesses the other's database.
+- **NFR-02 — Service isolation.** Identity, Order, and Payment own separate
+  databases; no service accesses another service's database.
 - **NFR-03 — Availability.** If OSRM is unavailable, the order service returns
-  a controlled error and does not persist a partially calculated order.
+  a controlled error and does not persist a partially calculated order. If
+  Stripe or the Order Service is unavailable, the Payment Service returns
+  `503` and nothing is persisted. A lost Stripe webhook is recovered by querying
+  Stripe on the return page or on `GET /api/payments/{orderId}`.
 - **NFR-04 — Scalability.** The Order Service can run as two stateless
   containers behind the API Gateway.
 - **NFR-05 — Maintainability.** Services are documented with OpenAPI, tested,
@@ -96,10 +116,16 @@ from a pre-defined catalogue of delivery points.
 4. During assignment, Order Service calls Identity Service with the manager's
    bearer token to confirm that the selected user has the `Estafeta` role.
 5. Order Service persists the delivery lifecycle in its own database.
+6. To pay, the customer calls Payment Service, which reads the order price from
+   Order Service's internal endpoint, creates a Stripe Checkout Session, and
+   returns the payment URL.
+7. Stripe confirms the payment through a signed webhook (or the return page
+   queries Stripe), and Payment Service marks the order as paid through Order
+   Service's internal endpoint.
 
 ## 7. Out of scope
 
-- Real payments and invoicing.
+- Real payments (live Stripe keys) and invoicing.
 - Real-time location tracking or GPS history.
 - Free-text address geocoding.
 - Route optimisation.

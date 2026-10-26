@@ -65,7 +65,7 @@ files or cloud configuration.
 | `POST` | `/api/orders/{id}/pickup` | Assigned Estafeta | Moves an assigned order to `InTransit`. |
 | `POST` | `/api/orders/{id}/deliver` | Assigned Estafeta | Completes an in-transit order. |
 | `POST` | `/api/orders/{id}/fail` | Assigned Estafeta | Marks an in-transit order as failed. |
-| `GET` | `/api/settings` | Administrator | Reads settings. |
+| `GET` | `/api/settings` | Administrator | Reads settings, including the pricing rates. |
 | `PUT` | `/api/settings` | Administrator | Changes settings. |
 | `GET` | `/health/live` | Anonymous | Liveness check. |
 
@@ -108,7 +108,45 @@ files or cloud configuration.
 }
 ```
 
-## 5. Gateway routes
+Order responses now include `price` (EUR) and `paymentStatus`
+(`Unpaid`, `Paid`, `Refunded`). `POST /api/orders` returns `orderId` and
+`price`. `POST /api/orders/{id}/assign` returns `409` when the order is unpaid.
+
+### Internal endpoints (not routed by the Gateway)
+
+| Method | Endpoint | Caller | Description |
+|---|---|---|---|
+| `GET` | `/internal/orders/{id}` | Payment Service | Returns `id`, `customerId`, `price`, `status`, `paymentStatus`. |
+| `POST` | `/internal/orders/{id}/payment` | Payment Service | Body `{ "paymentStatus": "Paid" \| "Refunded" }`; idempotent. |
+
+Both require the header `X-Internal-Key` equal to `INTERNAL_API_KEY`;
+otherwise they return `401` (`503` if the key is not configured).
+
+## 5. Payment Service endpoints
+
+| Method | Endpoint | Roles | Description |
+|---|---|---|---|
+| `POST` | `/api/payments/checkout` | Cliente | Body `{ "orderId": "..." }`; creates a Stripe Checkout Session and returns `checkoutUrl`. |
+| `GET` | `/api/payments/{orderId}` | Owner Cliente, Gestor, Administrador | Returns the payment; if still pending, queries Stripe first. |
+| `POST` | `/api/payments/{orderId}/refund` | Gestor, Administrador | Refunds a paid, rejected order. |
+| `POST` | `/api/payments/webhook` | Anonymous (Stripe signature) | Receives `checkout.session.completed`, `async_payment_succeeded`, and `expired`. |
+| `GET` | `/api/payments/return/success` | Anonymous | Stripe return page; confirms the session with Stripe. |
+| `GET` | `/api/payments/return/cancel` | Anonymous | Stripe cancel page. |
+| `GET` | `/health/live` | Anonymous | Liveness check. |
+
+### Checkout response
+
+```json
+{
+  "paymentId": "00000000-0000-0000-0000-000000000000",
+  "orderId": "00000000-0000-0000-0000-000000000001",
+  "amount": 7.50,
+  "currency": "eur",
+  "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_..."
+}
+```
+
+## 6. Gateway routes
 
 | Route prefix | Destination |
 |---|---|
@@ -117,8 +155,11 @@ files or cloud configuration.
 | `/api/orders/` | Order Service |
 | `/api/points/` | Order Service |
 | `/api/settings/` | Order Service |
+| `/api/payments/webhook` | Payment Service (anonymous; Stripe signature checked by the service) |
+| `/api/payments/return/` | Payment Service (anonymous) |
+| `/api/payments/` | Payment Service (authenticated) |
 
-## 6. Environment variables
+## 7. Environment variables
 
 | Variable | Used by | Example or purpose |
 |---|---|---|
@@ -129,9 +170,14 @@ files or cloud configuration.
 | `Jwt__Audience` | Gateway, Identity, Order | `lesto-api`. |
 | `IDENTITY_API_URL` | Order Service | Internal Identity Service URL. |
 | `OSRM_BASE_URL` | Order Service | OSRM routing endpoint. |
+| `STRIPE_SECRET_KEY` | Payment Service | Stripe test secret key (`sk_test_...`); live keys are refused. |
+| `STRIPE_WEBHOOK_SECRET` | Payment Service | Webhook signing secret (`whsec_...`), e.g. from `stripe listen --print-secret`. |
+| `INTERNAL_API_KEY` | Order, Payment | Shared key for `/internal/...` endpoints. |
+| `ORDER_INTERNAL_URL` | Payment Service | Internal Order Service URL. |
+| `PUBLIC_BASE_URL` | Payment Service | Public Gateway URL used in Stripe return links. |
 | `ASPNETCORE_URLS` | All backend containers | Kestrel listening address. |
 
-## 7. HTTP status codes
+## 8. HTTP status codes
 
 | Status | Meaning |
 |---|---|
@@ -141,5 +187,5 @@ files or cloud configuration.
 | `401 Unauthorized` | Missing, invalid, or expired token. |
 | `403 Forbidden` | Authenticated user lacks permission. |
 | `404 Not Found` | Requested resource does not exist or is inaccessible. |
-| `409 Conflict` | Invalid order state transition. |
-| `503 Service Unavailable` | OSRM route calculation unavailable. |
+| `409 Conflict` | Invalid order or payment state (e.g. assigning an unpaid order). |
+| `503 Service Unavailable` | OSRM, Stripe, or Order Service unavailable. |

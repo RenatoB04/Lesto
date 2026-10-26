@@ -48,6 +48,14 @@ public class SettingsController : ControllerBase
             return BadRequest(new { Message = "O valor para PesoMaximoKg tem de ser um número válido." });
         }
 
+        // Validação adicional: as taxas de preço têm de ser números maiores ou iguais a zero
+        if ((key == "PrecoBaseEur" || key == "PrecoPorKmEur" || key == "PrecoPorKgEur") &&
+            (!decimal.TryParse(dto.Value, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var price) || price < 0))
+        {
+            return BadRequest(new { Message = $"O valor para {key} tem de ser um número maior ou igual a zero (ex.: 0.40)." });
+        }
+
         setting.Value = dto.Value;
         await _context.SaveChangesAsync(cancellationToken);
 

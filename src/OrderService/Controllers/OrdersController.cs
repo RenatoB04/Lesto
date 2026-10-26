@@ -77,7 +77,13 @@ public class OrdersController : ControllerBase
             return Unauthorized();
         }
 
-        // 5. Criar e guardar a encomenda
+        // 5. Calcular o preço com as taxas definidas pelo Administrador
+        var precoBase = await LerDefinicaoDecimalAsync(PricingCalculator.BaseKey, PricingCalculator.DefaultBase);
+        var precoKm = await LerDefinicaoDecimalAsync(PricingCalculator.PerKmKey, PricingCalculator.DefaultPerKm);
+        var precoKg = await LerDefinicaoDecimalAsync(PricingCalculator.PerKgKey, PricingCalculator.DefaultPerKg);
+        var preco = PricingCalculator.Calculate(distancia, dto.Weight, precoBase, precoKm, precoKg);
+
+        // 6. Criar e guardar a encomenda (fica por pagar)
         var order = new Order
         {
             CustomerId = customerId,
@@ -88,13 +94,15 @@ public class OrdersController : ControllerBase
             RecipientData = dto.RecipientData,
             Distance = distancia,
             Duration = duracao,
+            Price = preco,
+            PaymentStatus = PaymentStatus.Unpaid,
             Status = OrderStatus.Pending
         };
 
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
 
-        return StatusCode(201, new { Message = "Encomenda criada com sucesso.", OrderId = order.Id });
+        return StatusCode(201, new { Message = "Encomenda criada com sucesso.", OrderId = order.Id, Price = order.Price });
     }
 
     [HttpGet]
@@ -203,6 +211,10 @@ public class OrdersController : ControllerBase
         if (order.Status != OrderStatus.Pending && order.Status != OrderStatus.Failed)
             return Conflict(new { Message = "Apenas encomendas pendentes ou falhadas podem ser atribuídas." });
 
+        // Só se podem atribuir encomendas já pagas
+        if (order.PaymentStatus != PaymentStatus.Paid)
+            return Conflict(new { Message = "A encomenda ainda não foi paga e não pode ser atribuída." });
+
         // Extrair o token do cabeçalho atual para o passar ao Identity Service
         var authHeader = Request.Headers["Authorization"].ToString();
         var token = authHeader.StartsWith("Bearer ") ? authHeader.Substring(7) : authHeader;
@@ -289,6 +301,18 @@ public class OrdersController : ControllerBase
         return Ok(new { Message = "Falha na entrega registada." });
     }
 
+    // Método auxiliar para ler uma definição numérica (usa o valor por omissão se não existir)
+    private async Task<decimal> LerDefinicaoDecimalAsync(string key, decimal valorPorOmissao)
+    {
+        var setting = await _context.Settings.FindAsync(key);
+        if (setting != null && decimal.TryParse(setting.Value, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var valor) && valor >= 0)
+        {
+            return valor;
+        }
+        return valorPorOmissao;
+    }
+
     // Método auxiliar para evitar duplicação de código
     private static OrderDto MapearParaDto(Order order)
     {
@@ -301,6 +325,8 @@ public class OrdersController : ControllerBase
             RecipientData = order.RecipientData,
             Distance = order.Distance,
             Duration = order.Duration,
+            Price = order.Price,
+            PaymentStatus = order.PaymentStatus.ToString(),
             Origin = new PointDto { Id = order.Origin.Id, Name = order.Origin.Name },
             Destination = new PointDto { Id = order.Destination.Id, Name = order.Destination.Name }
         };

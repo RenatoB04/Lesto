@@ -50,7 +50,7 @@ sequenceDiagram
 
     Client->>Gateway: POST /api/orders/{id}/assign
     Gateway->>Order: Forward manager bearer token
-    Order->>Order: Validate manager role and Pending/Failed state
+    Order->>Order: Validate manager role, Pending/Failed state, and Paid payment
     Order->>Identity: GET /api/users/{courierId} (manager token)
     Identity-->>Order: User profile and Estafeta role
     Order->>Db: Store courier and set Validated
@@ -81,4 +81,54 @@ sequenceDiagram
     Order->>Db: Save Delivered or Failed status
     Order-->>Gateway: 200 OK
     Gateway-->>Client: Updated order
+```
+
+## 5. Pay an order (Stripe Checkout)
+
+```mermaid
+sequenceDiagram
+    participant Client as API Client / Browser
+    participant Gateway as API Gateway
+    participant Payment as Payment Service
+    participant Order as Order Service
+    participant Stripe as Stripe (test mode)
+    participant Db as paymentdb
+
+    Client->>Gateway: POST /api/payments/checkout {orderId} (customer token)
+    Gateway->>Payment: Forward authenticated request
+    Payment->>Order: GET /internal/orders/{id} (X-Internal-Key)
+    Order-->>Payment: customerId, price, status, paymentStatus
+    Payment->>Payment: Check owner, Pending and Unpaid
+    Payment->>Stripe: Create Checkout Session (amount in cents)
+    Stripe-->>Payment: sessionId, checkout URL
+    Payment->>Db: Save Payment (Pending)
+    Payment-->>Client: 201 checkoutUrl
+    Client->>Stripe: Pay on the hosted page (card 4242 4242 4242 4242)
+    Stripe->>Gateway: POST /api/payments/webhook (signed event)
+    Gateway->>Payment: Forward (anonymous route)
+    Payment->>Payment: Verify Stripe-Signature
+    Payment->>Db: Mark Payment as Paid
+    Payment->>Order: POST /internal/orders/{id}/payment {Paid} (X-Internal-Key)
+    Order-->>Payment: 200 OK
+    Stripe-->>Client: Redirect to /api/payments/return/success
+    Note over Payment,Stripe: The return page and GET /api/payments/{orderId}<br/>query Stripe again, so a lost webhook is recovered.
+```
+
+## 6. Refund a rejected order
+
+```mermaid
+sequenceDiagram
+    participant Client as API Client
+    participant Gateway as API Gateway
+    participant Payment as Payment Service
+    participant Order as Order Service
+    participant Stripe as Stripe (test mode)
+
+    Client->>Gateway: POST /api/payments/{orderId}/refund (manager token)
+    Gateway->>Payment: Forward authenticated request
+    Payment->>Order: GET /internal/orders/{id} (X-Internal-Key)
+    Order-->>Payment: status Rejected
+    Payment->>Stripe: Create refund for the PaymentIntent
+    Payment->>Order: POST /internal/orders/{id}/payment {Refunded}
+    Payment-->>Client: 200 OK
 ```

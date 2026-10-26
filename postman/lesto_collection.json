@@ -522,6 +522,147 @@
           "response": []
         },
         {
+          "name": "Atribuir Encomenda 1 Sem Pagamento (Gestor) - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Encomenda por pagar não pode ser atribuída\", function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_gestor}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id_1}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id_1}}",
+                "assign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"courierId\": \"{{id_estafeta}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pagar Encomenda 1 - Checkout Stripe (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Sessão de pagamento criada\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif (data.checkoutUrl) { pm.environment.set(\"checkout_url\", data.checkoutUrl); console.log(\"Abrir no browser e pagar com 4242 4242 4242 4242: \" + data.checkoutUrl); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "checkout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"orderId\": \"{{order_id_1}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Devolve checkoutUrl. Abrir o URL no browser e pagar com o cartão de teste 4242 4242 4242 4242 (qualquer data futura e CVC) antes de correr o pedido seguinte."
+          },
+          "response": []
+        },
+        {
+          "name": "Estado do Pagamento Encomenda 1 (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pagamento confirmado pelo Stripe\", function () {\r\n    pm.response.to.have.status(200);\r\n    pm.expect(pm.response.json().status).to.eql(\"Paid\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{order_id_1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "{{order_id_1}}"
+              ]
+            },
+            "description": "Consulta o estado; se ainda estiver pendente, o Payment Service confirma junto do Stripe."
+          },
+          "response": []
+        },
+        {
           "name": "Atribuir Encomenda 1 (Gestor)",
           "event": [
             {

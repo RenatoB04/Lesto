@@ -17,7 +17,7 @@ namespace OrderService.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -45,6 +45,16 @@ namespace OrderService.Migrations
 
                     b.Property<Guid>("OriginPointId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<string>("Reason")
                         .HasColumnType("text");
@@ -155,6 +165,21 @@ namespace OrderService.Migrations
                         {
                             Key = "PesoMaximoKg",
                             Value = "30"
+                        },
+                        new
+                        {
+                            Key = "PrecoBaseEur",
+                            Value = "2.50"
+                        },
+                        new
+                        {
+                            Key = "PrecoPorKmEur",
+                            Value = "0.40"
+                        },
+                        new
+                        {
+                            Key = "PrecoPorKgEur",
+                            Value = "0.20"
                         });
                 });
 

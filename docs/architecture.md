@@ -2,7 +2,7 @@
 
 ## 1. Architectural style
 
-Lesto uses a microservices architecture with a single API Gateway. The two
+Lesto uses a microservices architecture with a single API Gateway. The three
 business services are independently deployable and own their data. They use
 synchronous REST communication because the reduced scope does not require
 asynchronous processing.
@@ -16,6 +16,11 @@ flowchart LR
     Identity --> IdentityDb[("identitydb\nPostgreSQL")]
     Order --> OrderDb[("orderdb\nPostgreSQL")]
     Order -->|HTTPS / REST| Osrm["OSRM public routing service"]
+    Gateway -->|REST| Payment["Payment Service"]
+    Payment -->|REST, internal network\nX-Internal-Key| Order
+    Payment --> PaymentDb[("paymentdb\nPostgreSQL")]
+    Payment -->|HTTPS / REST| Stripe["Stripe API (test mode)"]
+    Stripe -->|Signed webhook| Gateway
 ```
 
 ## 2. Components
@@ -25,10 +30,12 @@ flowchart LR
 | API Gateway | Single entry point, routing, JWT validation, and HTTPS termination. | Yes | None. |
 | Identity Service | Registration, login, JWT issuance, user and role management. | No | `identitydb`. |
 | Order Service | Delivery points, orders, order state machine, weight setting, and statistics. | No | `orderdb`. |
+| Payment Service | Stripe Checkout sessions, payment confirmation (webhook and query), refunds. | No | `paymentdb`. |
 | OSRM | External route distance and duration calculation. | External provider | None. |
+| Stripe | External payment processing in test mode. | External provider | Card data stays at Stripe. |
 
-One PostgreSQL container hosts two logical databases during development:
-`identitydb` and `orderdb`. Each service uses only its own connection string.
+One PostgreSQL container hosts three logical databases during development:
+`identitydb`, `orderdb`, and `paymentdb`. Each service uses only its own connection string.
 
 ## 3. Communication
 
@@ -38,6 +45,12 @@ One PostgreSQL container hosts two logical databases during development:
 - Order Service calls Identity Service only to validate a selected courier at
   assignment time.
 - Order Service calls OSRM only after both catalogue points have been selected.
+- Payment Service calls Order Service's internal endpoints
+  (`/internal/orders/{id}` and `/internal/orders/{id}/payment`) with the
+  `X-Internal-Key` header. These endpoints have no Gateway route.
+- Payment Service calls Stripe to create Checkout Sessions, read their status,
+  and create refunds. Stripe calls back through the Gateway route
+  `/api/payments/webhook`, which is anonymous but signature-verified.
 - There is no event broker, notification service, or direct database sharing.
 
 ## 4. Security design
@@ -69,8 +82,9 @@ other remains available demonstrates basic maintenance resilience.
 
 ## 7. Architecture decisions
 
-- Two business services are sufficient to demonstrate a microservices design
-  while keeping the project deliverable within the available time.
+- Three business services (Identity, Order, Payment) demonstrate a
+  microservices design with separate data ownership and service-to-service
+  calls in both directions of trust (user token and internal key).
 - A pre-defined point catalogue avoids sending personal delivery addresses to
   public geocoding services.
 - OSRM provides a relevant external integration without route optimisation.

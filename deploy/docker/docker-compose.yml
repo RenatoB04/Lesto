@@ -62,6 +62,23 @@ services:
       - order-service-1
       - identity-service
 
+  payment-service:
+    build:
+      context: ../../src/PaymentService
+      dockerfile: Dockerfile
+    container_name: lesto-payment
+    restart: always
+    env_file:
+      - ../../.env
+    ports:
+      - "5004:8080"
+    environment:
+      - DB_HOST=postgres
+      - ORDER_INTERNAL_URL=http://order-service-1:8080
+    depends_on:
+      - postgres
+      - order-service-1
+
   api-gateway:
     build:
       context: ../../src/ApiGateway
@@ -77,10 +94,12 @@ services:
       - ReverseProxy__Clusters__order-cluster__LoadBalancingPolicy=RoundRobin
       - ReverseProxy__Clusters__order-cluster__Destinations__destination1__Address=http://order-service-1:8080
       - ReverseProxy__Clusters__order-cluster__Destinations__destination2__Address=http://order-service-2:8080
+      - ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address=http://payment-service:8080
     depends_on:
       - identity-service
       - order-service-1
       - order-service-2
+      - payment-service
 
 volumes:
   postgres_data:

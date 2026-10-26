@@ -30,8 +30,15 @@ public class OrderDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Setting>().HasData(
-            new Setting { Key = "PesoMaximoKg", Value = "30" }
+            new Setting { Key = "PesoMaximoKg", Value = "30" },
+            new Setting { Key = "PrecoBaseEur", Value = "2.50" },
+            new Setting { Key = "PrecoPorKmEur", Value = "0.40" },
+            new Setting { Key = "PrecoPorKgEur", Value = "0.20" }
         );
+
+        modelBuilder.Entity<Order>()
+            .Property(o => o.Price)
+            .HasPrecision(10, 2);
 
         modelBuilder.Entity<Point>().HasData(
             new Point { Id = Guid.Parse("d8b3c9a2-5f6e-4b1a-8c2d-9e7f3a1b4c6d"), Name = "Ponto Braga Centro", Latitude = 41.5503, Longitude = -8.4200 },
