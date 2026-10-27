@@ -483,6 +483,148 @@
           "response": []
         },
         {
+          "name": "Pré-visualizar Morada (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Morada encontrada\", function () {\r\n    pm.response.to.have.status(200);\r\n    pm.expect(pm.response.json().latitude).to.be.a(\"number\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/geocode?q=Avenida da Liberdade, Braga",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "geocode"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Avenida da Liberdade, Braga"
+                }
+              ]
+            },
+            "description": "Converte a morada em coordenadas (Nominatim) para o cliente confirmar o local antes de criar a encomenda."
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Encomenda 3 - Com Moradas (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Encomenda com moradas criada\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif (data.orderId) pm.environment.set(\"order_id_3\", data.orderId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"originAddress\": \"Avenida da Liberdade, Braga\",\r\n  \"destinationAddress\": \"Largo da Porta Nova, Barcelos\",\r\n  \"weight\": 3,\r\n  \"type\": \"Normal\",\r\n  \"recipientData\": \"Maria Costa\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Encomenda - Morada Inexistente (Cliente) - 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Morada não encontrada\", function () { pm.response.to.have.status(422); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"originAddress\": \"Rua Que Nao Existe 99999, Xpto\",\r\n  \"destinationAddress\": \"Avenida da Liberdade, Braga\",\r\n  \"weight\": 3,\r\n  \"type\": \"Normal\",\r\n  \"recipientData\": \"Teste\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Listar Encomendas (Gestor)",
           "event": [
             {
@@ -518,6 +660,147 @@
                 "orders"
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Atribuir Encomenda 1 Sem Pagamento (Gestor) - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Encomenda por pagar não pode ser atribuída\", function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_gestor}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id_1}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id_1}}",
+                "assign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"courierId\": \"{{id_estafeta}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pagar Encomenda 1 - Checkout Stripe (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Sessão de pagamento criada\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif (data.checkoutUrl) { pm.environment.set(\"checkout_url\", data.checkoutUrl); console.log(\"Abrir no browser e pagar com 4242 4242 4242 4242: \" + data.checkoutUrl); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "checkout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"orderId\": \"{{order_id_1}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Devolve checkoutUrl. Abrir o URL no browser e pagar com o cartão de teste 4242 4242 4242 4242 (qualquer data futura e CVC) antes de correr o pedido seguinte."
+          },
+          "response": []
+        },
+        {
+          "name": "Estado do Pagamento Encomenda 1 (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pagamento confirmado pelo Stripe\", function () {\r\n    pm.response.to.have.status(200);\r\n    pm.expect(pm.response.json().status).to.eql(\"Paid\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{order_id_1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "{{order_id_1}}"
+              ]
+            },
+            "description": "Consulta o estado; se ainda estiver pendente, o Payment Service confirma junto do Stripe."
           },
           "response": []
         },
@@ -568,6 +851,57 @@
                 "assign"
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Rota Otimizada (Estafeta)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rota calculada\", function () {\r\n    pm.response.to.have.status(200);\r\n    var rota = pm.response.json();\r\n    pm.expect(rota.stops.length).to.be.above(0);\r\n    console.log(\"Fonte: \" + rota.source + \" | \" + rota.totalDistanceKm + \" km (ordem ingénua: \" + rota.baselineDistanceKm + \" km, poupança \" + rota.savingPercent + \"%)\");\r\n    if (rota.googleMapsUrl) console.log(\"Google Maps: \" + rota.googleMapsUrl);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_estafeta}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/optimized?lat=41.5367&lon=-8.6277",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "routes",
+                "optimized"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "41.5367"
+                },
+                {
+                  "key": "lon",
+                  "value": "-8.6277"
+                }
+              ]
+            },
+            "description": "Ordena as recolhas e entregas das encomendas atribuídas ao estafeta (partida no IPCA). Com mais encomendas atribuídas ao mesmo estafeta a poupança face à ordem ingénua fica mais visível."
           },
           "response": []
         },

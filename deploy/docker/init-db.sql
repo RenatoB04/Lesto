@@ -1,2 +1,3 @@
 CREATE DATABASE identitydb;
 CREATE DATABASE orderdb;
+CREATE DATABASE paymentdb;

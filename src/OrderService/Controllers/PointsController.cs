@@ -21,7 +21,9 @@ public class PointsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPoints()
     {
+        // Só os pontos do catálogo (as moradas dos clientes não são públicas)
         var points = await _context.Points
+            .Where(p => p.IsCatalog)
             .Select(p => new PointDto { Id = p.Id, Name = p.Name })
             .ToListAsync();
 

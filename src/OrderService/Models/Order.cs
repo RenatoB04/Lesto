@@ -21,4 +21,9 @@ public class Order
 
     public double Distance { get; set; }
     public double Duration { get; set; }
+
+    // Dados do pagamento (o estado só é alterado pelo Payment Service)
+    public decimal Price { get; set; }
+    public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
+    public DateTime? PaidAt { get; set; }
 }

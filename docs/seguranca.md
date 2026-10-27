@@ -30,6 +30,27 @@ conformes ate a correcao e nova verificacao.
   Verificar novamente o historico Git e rodar quaisquer credenciais que tenham
   sido utilizadas.
 
+- [x] **Pagamentos (Stripe) - 2026-10-26.** A chave `STRIPE_SECRET_KEY` e o
+  `STRIPE_WEBHOOK_SECRET` existem apenas no `.env`; o Payment Service recusa
+  arrancar com chaves que nao sejam de teste (`sk_test_`). O pagamento e feito
+  na pagina alojada pelo Stripe, por isso nenhum dado de cartao passa pelo Lesto.
+- [x] **Webhook autenticado.** `POST /api/payments/webhook` e anonimo no
+  Gateway, mas o servico verifica a assinatura `Stripe-Signature`; pedidos sem
+  assinatura valida recebem `400`. A pagina de regresso nao confia no
+  `session_id` do URL: confirma sempre o estado junto do Stripe.
+- [x] **Comunicacao entre servicos.** Os endpoints `/internal/orders/...` nao
+  tem rota no Gateway e exigem `X-Internal-Key` igual a `INTERNAL_API_KEY`,
+  comparada em tempo constante; sem chave configurada devolvem `503`.
+- [x] **Autorizacao dos pagamentos.** O cliente so paga e consulta as proprias
+  encomendas; reembolsos so para Gestor/Administrador e apenas em encomendas
+  rejeitadas.
+
+- [x] **Moradas em texto livre - 2026-10-26.** As moradas dos clientes ficam
+  guardadas como pontos fora do catalogo (`IsCatalog = false`); `GET /api/points`
+  devolve apenas o catalogo, por isso nenhum cliente ve moradas de outros. Ao
+  Nominatim e enviado apenas o texto da morada, sem identificacao do cliente.
+  Erros do Nominatim devolvem mensagem generica (`503`) e ficam apenas no log.
+
 ## Evidencias e seguimento
 
 As verificacoes referem-se ao codigo atual; credenciais presentes no historico

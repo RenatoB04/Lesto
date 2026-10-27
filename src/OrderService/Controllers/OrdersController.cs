@@ -19,17 +19,20 @@ public class OrdersController : ControllerBase
     private readonly IOsrmService _osrmService;
     private readonly IIdentityServiceClient _identityServiceClient;
     private readonly ILogger<OrdersController> _logger;
+    private readonly IGeocodingService _geocodingService;
 
     public OrdersController(
         OrderDbContext context,
         IOsrmService osrmService,
         IIdentityServiceClient identityServiceClient,
-        ILogger<OrdersController> logger)
+        ILogger<OrdersController> logger,
+        IGeocodingService geocodingService)
     {
         _context = context;
         _osrmService = osrmService;
         _identityServiceClient = identityServiceClient;
         _logger = logger;
+        _geocodingService = geocodingService;
     }
 
     [HttpPost]
@@ -46,21 +49,19 @@ public class OrdersController : ControllerBase
             }
         }
 
-        // 2. Obter as coordenadas de Origem e Destino
-        var origem = await _context.Points.FindAsync(dto.OriginPointId);
-        var destino = await _context.Points.FindAsync(dto.DestinationPointId);
+        // 2. Obter as coordenadas de Origem e Destino (ponto do catálogo ou morada)
+        var (origem, erroOrigem) = await ResolverPontoAsync(dto.OriginPointId, dto.OriginAddress, "origem");
+        if (erroOrigem != null) return erroOrigem;
 
-        if (origem == null || destino == null)
-        {
-            return BadRequest(new { Message = "Ponto de origem ou destino inválido." });
-        }
+        var (destino, erroDestino) = await ResolverPontoAsync(dto.DestinationPointId, dto.DestinationAddress, "destino");
+        if (erroDestino != null) return erroDestino;
 
         // 3. Obter Distância e Duração reais através do OSRM
         double distancia = 0;
         double duracao = 0;
         try
         {
-            var rota = await _osrmService.ObterRotaAsync(origem.Latitude, origem.Longitude, destino.Latitude, destino.Longitude);
+            var rota = await _osrmService.ObterRotaAsync(origem!.Latitude, origem.Longitude, destino!.Latitude, destino.Longitude);
             distancia = rota.DistanciaKm;
             duracao = rota.DuracaoMin;
         }
@@ -77,24 +78,32 @@ public class OrdersController : ControllerBase
             return Unauthorized();
         }
 
-        // 5. Criar e guardar a encomenda
+        // 5. Calcular o preço com as taxas definidas pelo Administrador
+        var precoBase = await LerDefinicaoDecimalAsync(PricingCalculator.BaseKey, PricingCalculator.DefaultBase);
+        var precoKm = await LerDefinicaoDecimalAsync(PricingCalculator.PerKmKey, PricingCalculator.DefaultPerKm);
+        var precoKg = await LerDefinicaoDecimalAsync(PricingCalculator.PerKgKey, PricingCalculator.DefaultPerKg);
+        var preco = PricingCalculator.Calculate(distancia, dto.Weight, precoBase, precoKm, precoKg);
+
+        // 6. Criar e guardar a encomenda (fica por pagar); os pontos novos são guardados em conjunto
         var order = new Order
         {
             CustomerId = customerId,
-            OriginPointId = origem.Id,
-            DestinationPointId = destino.Id,
+            Origin = origem!,
+            Destination = destino!,
             Weight = dto.Weight,
             Type = dto.Type,
             RecipientData = dto.RecipientData,
             Distance = distancia,
             Duration = duracao,
+            Price = preco,
+            PaymentStatus = PaymentStatus.Unpaid,
             Status = OrderStatus.Pending
         };
 
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
 
-        return StatusCode(201, new { Message = "Encomenda criada com sucesso.", OrderId = order.Id });
+        return StatusCode(201, new { Message = "Encomenda criada com sucesso.", OrderId = order.Id, Price = order.Price });
     }
 
     [HttpGet]
@@ -203,6 +212,10 @@ public class OrdersController : ControllerBase
         if (order.Status != OrderStatus.Pending && order.Status != OrderStatus.Failed)
             return Conflict(new { Message = "Apenas encomendas pendentes ou falhadas podem ser atribuídas." });
 
+        // Só se podem atribuir encomendas já pagas
+        if (order.PaymentStatus != PaymentStatus.Paid)
+            return Conflict(new { Message = "A encomenda ainda não foi paga e não pode ser atribuída." });
+
         // Extrair o token do cabeçalho atual para o passar ao Identity Service
         var authHeader = Request.Headers["Authorization"].ToString();
         var token = authHeader.StartsWith("Bearer ") ? authHeader.Substring(7) : authHeader;
@@ -289,6 +302,67 @@ public class OrdersController : ControllerBase
         return Ok(new { Message = "Falha na entrega registada." });
     }
 
+    // Método auxiliar para obter o ponto a partir do catálogo ou de uma morada em texto livre
+    private async Task<(Point? Ponto, IActionResult? Erro)> ResolverPontoAsync(Guid? pointId, string? address, string lado)
+    {
+        var temMorada = !string.IsNullOrWhiteSpace(address);
+        if (pointId.HasValue == temMorada)
+            return (null, BadRequest(new { Message = $"Indique o ponto ou a morada de {lado} (apenas um dos dois)." }));
+
+        // Ponto do catálogo
+        if (pointId.HasValue)
+        {
+            var ponto = await _context.Points.FirstOrDefaultAsync(p => p.Id == pointId.Value && p.IsCatalog);
+            return ponto == null
+                ? (null, BadRequest(new { Message = $"Ponto de {lado} inválido." }))
+                : (ponto, null);
+        }
+
+        // Morada em texto livre
+        var morada = GeocodeController.NormalizarMorada(address);
+        if (morada == null)
+            return (null, BadRequest(new { Message = $"A morada de {lado} tem de ter até {GeocodeController.MaxAddressLength} caracteres." }));
+
+        // Reutilizar uma morada já geocodificada (evita pedidos repetidos ao Nominatim)
+        var existente = await _context.Points.FirstOrDefaultAsync(p => !p.IsCatalog && p.Address == morada);
+        if (existente != null) return (existente, null);
+
+        GeocodingResult? resultado;
+        try
+        {
+            resultado = await _geocodingService.GeocodeAsync(morada);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to geocode an address while creating an order.");
+            return (null, StatusCode(503, new { Message = "Serviço de moradas indisponível. Tente mais tarde." }));
+        }
+
+        if (resultado == null)
+            return (null, UnprocessableEntity(new { Message = $"Morada de {lado} não encontrada." }));
+
+        return (new Point
+        {
+            Name = resultado.DisplayName.Length > 200 ? resultado.DisplayName[..200] : resultado.DisplayName,
+            Address = morada,
+            Latitude = resultado.Latitude,
+            Longitude = resultado.Longitude,
+            IsCatalog = false
+        }, null);
+    }
+
+    // Método auxiliar para ler uma definição numérica (usa o valor por omissão se não existir)
+    private async Task<decimal> LerDefinicaoDecimalAsync(string key, decimal valorPorOmissao)
+    {
+        var setting = await _context.Settings.FindAsync(key);
+        if (setting != null && decimal.TryParse(setting.Value, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var valor) && valor >= 0)
+        {
+            return valor;
+        }
+        return valorPorOmissao;
+    }
+
     // Método auxiliar para evitar duplicação de código
     private static OrderDto MapearParaDto(Order order)
     {
@@ -301,6 +375,8 @@ public class OrdersController : ControllerBase
             RecipientData = order.RecipientData,
             Distance = order.Distance,
             Duration = order.Duration,
+            Price = order.Price,
+            PaymentStatus = order.PaymentStatus.ToString(),
             Origin = new PointDto { Id = order.Origin.Id, Name = order.Origin.Name },
             Destination = new PointDto { Id = order.Destination.Id, Name = order.Destination.Name }
         };

@@ -9,6 +9,8 @@ public class OrderDto
     public string RecipientData { get; set; } = string.Empty;
     public double Distance { get; set; }
     public double Duration { get; set; }
+    public decimal Price { get; set; }
+    public string PaymentStatus { get; set; } = string.Empty;
     public PointDto Origin { get; set; } = null!;
     public PointDto Destination { get; set; } = null!;
 }
