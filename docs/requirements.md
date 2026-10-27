@@ -8,7 +8,7 @@ documented REST API.
 
 The project is intentionally limited to the academic scope. Payments are
 processed through Stripe in test mode only (no real money). It does not provide
-real-time courier tracking or optimise delivery routes. Free-text addresses are
+real-time courier tracking. Free-text addresses are
 geocoded with Nominatim (OpenStreetMap). Origins and destinations are selected
 from a pre-defined catalogue of delivery points.
 
@@ -36,6 +36,10 @@ from a pre-defined catalogue of delivery points.
 - **FR-COU-02** — Move a validated assigned order to `InTransit`.
 - **FR-COU-03** — Complete an in-transit order as `Delivered` or `Failed`.
   A failed delivery requires a reason.
+- **FR-COU-04** — Get an optimised order of stops (pickups and deliveries) for
+  the orders assigned to the authenticated courier, with total distance and
+  duration, the saving compared with handling one order at a time, and a Google
+  Maps navigation link.
 
 ### Manager
 
@@ -82,6 +86,9 @@ from a pre-defined catalogue of delivery points.
 - Free-text addresses are geocoded only in Portugal, are limited to 200
   characters, and are stored as non-catalogue points. An address that is not
   found returns `422 Unprocessable Entity`.
+- In an optimised route, the pickup of an order always comes before its
+  delivery. `Validated` orders give a pickup and a delivery stop; `InTransit`
+  orders give only a delivery stop. A route has at most 40 stops.
 - The public point list (`GET /api/points`) returns only catalogue points;
   customer addresses are visible only through the orders they belong to.
 
@@ -108,7 +115,9 @@ from a pre-defined catalogue of delivery points.
   a controlled error and does not persist a partially calculated order. If
   Nominatim is unavailable, order creation with an address returns `503` and
   nothing is persisted. If Stripe or the Order Service is unavailable, the
-  Payment Service returns `503` and nothing is persisted. A lost Stripe webhook is recovered by querying
+  Payment Service returns `503` and nothing is persisted. If the OSRM table
+  service is unavailable, route optimisation still answers using a Haversine
+  estimate and marks the result as `estimativa`. A lost Stripe webhook is recovered by querying
   Stripe on the return page or on `GET /api/payments/{orderId}`.
 - **NFR-04 — Scalability.** The Order Service can run as two stateless
   containers behind the API Gateway.
@@ -139,6 +148,5 @@ from a pre-defined catalogue of delivery points.
 
 - Real payments (live Stripe keys) and invoicing.
 - Real-time location tracking or GPS history.
-- Route optimisation.
 - Email notifications and asynchronous messaging.
 - Kubernetes, automatic scaling, and CI/CD pipelines.
