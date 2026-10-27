@@ -156,3 +156,25 @@ sequenceDiagram
     Order->>Db: Save new points and the Pending order (one transaction)
     Order-->>Client: 201 Created (orderId, price)
 ```
+
+## 8. Optimised courier route
+
+```mermaid
+sequenceDiagram
+    participant Client as Courier (API Client)
+    participant Gateway as API Gateway
+    participant Order as Order Service
+    participant Db as orderdb
+    participant OSRM as OSRM
+
+    Client->>Gateway: GET /api/routes/optimized?lat=..&lon=.. (courier token)
+    Gateway->>Order: Forward authenticated request
+    Order->>Db: Load the courier's Validated and InTransit orders
+    Order->>Order: Build stops (pickup + delivery, or delivery only)
+    Order->>OSRM: table/v1/driving with all stops (one request)
+    alt OSRM unavailable
+        Order->>Order: Haversine matrix (source = estimativa)
+    end
+    Order->>Order: Nearest neighbour + 2-opt with precedence
+    Order-->>Client: Ordered stops, km, minutes, saving %, Google Maps link
+```

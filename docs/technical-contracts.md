@@ -57,6 +57,7 @@ files or cloud configuration.
 | Method | Endpoint | Roles | Description |
 |---|---|---|---|
 | `GET` | `/api/points` | Authenticated | Lists catalogue points only (customer addresses are never listed). |
+| `GET` | `/api/routes/optimized?lat=..&lon=..` | Estafeta | Optimised stop order for the caller's `Validated`/`InTransit` orders; `lat`/`lon` (optional) is the start position. |
 | `GET` | `/api/geocode?q=...` | Cliente | Previews an address: returns `query`, `displayName`, `latitude`, `longitude`; `404` if not found. |
 | `POST` | `/api/orders` | Customer | Creates an order. |
 | `GET` | `/api/orders` | Authenticated | Returns orders filtered by caller role; Manager and Administrator may use `status`. |
@@ -95,6 +96,26 @@ Each side accepts either a point id or an address (exactly one):
   "recipientData": "Example Recipient"
 }
 ```
+
+### Optimised route response
+
+```json
+{
+  "source": "osrm",
+  "stops": [
+    { "sequence": 1, "orderId": "...", "type": "Recolha", "name": "Ponto Braga Centro", "latitude": 41.5503, "longitude": -8.42 },
+    { "sequence": 2, "orderId": "...", "type": "Entrega", "name": "Ponto IPCA", "latitude": 41.5367, "longitude": -8.6277 }
+  ],
+  "totalDistanceKm": 31.4,
+  "totalDurationMin": 38.2,
+  "baselineDistanceKm": 40.9,
+  "savingPercent": 23.2,
+  "googleMapsUrl": "https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=...&destination=...&waypoints=..."
+}
+```
+
+`source` is `estimativa` when OSRM was unavailable. `googleMapsUrl` is `null`
+for routes with more than 10 stops (Google Maps link limit).
 
 ### Update status request
 
@@ -169,6 +190,7 @@ otherwise they return `401` (`503` if the key is not configured).
 | `/api/points/` | Order Service |
 | `/api/settings/` | Order Service |
 | `/api/geocode/` | Order Service |
+| `/api/routes/` | Order Service |
 | `/api/payments/webhook` | Payment Service (anonymous; Stripe signature checked by the service) |
 | `/api/payments/return/` | Payment Service (anonymous) |
 | `/api/payments/` | Payment Service (authenticated) |

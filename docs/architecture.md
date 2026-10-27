@@ -30,7 +30,7 @@ flowchart LR
 |---|---|---:|---|
 | API Gateway | Single entry point, routing, JWT validation, and HTTPS termination. | Yes | None. |
 | Identity Service | Registration, login, JWT issuance, user and role management. | No | `identitydb`. |
-| Order Service | Delivery points, orders, order state machine, weight setting, and statistics. | No | `orderdb`. |
+| Order Service | Delivery points, orders, order state machine, weight and pricing settings, geocoding, courier route optimisation, and statistics. | No | `orderdb`. |
 | Payment Service | Stripe Checkout sessions, payment confirmation (webhook and query), refunds. | No | `paymentdb`. |
 | OSRM | External route distance and duration calculation. | External provider | None. |
 | Nominatim | External geocoding of free-text addresses (Portugal only). | External provider | None. |
@@ -46,6 +46,8 @@ One PostgreSQL container hosts three logical databases during development:
   private Docker network.
 - Order Service calls Identity Service only to validate a selected courier at
   assignment time.
+- For route optimisation, Order Service makes one OSRM `table` request with all
+  the courier's stops; the ordering itself is computed locally.
 - Order Service calls Nominatim only for free-text addresses that were not
   geocoded before, then calls OSRM with the resolved coordinates.
 - Payment Service calls Order Service's internal endpoints

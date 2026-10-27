@@ -855,6 +855,57 @@
           "response": []
         },
         {
+          "name": "Rota Otimizada (Estafeta)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rota calculada\", function () {\r\n    pm.response.to.have.status(200);\r\n    var rota = pm.response.json();\r\n    pm.expect(rota.stops.length).to.be.above(0);\r\n    console.log(\"Fonte: \" + rota.source + \" | \" + rota.totalDistanceKm + \" km (ordem ingénua: \" + rota.baselineDistanceKm + \" km, poupança \" + rota.savingPercent + \"%)\");\r\n    if (rota.googleMapsUrl) console.log(\"Google Maps: \" + rota.googleMapsUrl);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_estafeta}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/optimized?lat=41.5367&lon=-8.6277",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "routes",
+                "optimized"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "41.5367"
+                },
+                {
+                  "key": "lon",
+                  "value": "-8.6277"
+                }
+              ]
+            },
+            "description": "Ordena as recolhas e entregas das encomendas atribuídas ao estafeta (partida no IPCA). Com mais encomendas atribuídas ao mesmo estafeta a poupança face à ordem ingénua fica mais visível."
+          },
+          "response": []
+        },
+        {
           "name": "Rejeitar Encomenda 2 (Gestor)",
           "event": [
             {

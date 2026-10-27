@@ -60,4 +60,57 @@ public class OsrmService : IOsrmService
             _rateLimit.Release();
         }
     }
+
+    public async Task<RouteMatrix> ObterMatrizAsync(IReadOnlyList<(double Latitude, double Longitude)> pontos)
+    {
+        // 1. Bloqueia outros pedidos concorrentes
+        await _rateLimit.WaitAsync();
+        try
+        {
+            // 2. Garante o compasso de espera de 1 segundo entre pedidos
+            var tempoDesdeUltimoPedido = DateTime.UtcNow - _lastRequest;
+            if (tempoDesdeUltimoPedido.TotalSeconds < 1)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1) - tempoDesdeUltimoPedido);
+            }
+
+            // 3. Um único pedido ao serviço "table" devolve a matriz entre todos os pontos (ordem Longitude,Latitude)
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var coordenadas = string.Join(";", pontos.Select(p => $"{p.Longitude.ToString(inv)},{p.Latitude.ToString(inv)}"));
+            var url = $"table/v1/driving/{coordenadas}?annotations=distance,duration";
+
+            var response = await _httpClient.GetAsync(url);
+            _lastRequest = DateTime.UtcNow;
+
+            if (!response.IsSuccessStatusCode)
+                throw new Exception("Falha ao contactar o servidor OSRM.");
+
+            var content = await response.Content.ReadAsStringAsync();
+            var tabela = JsonSerializer.Deserialize<OsrmTableResponse>(content);
+
+            var n = pontos.Count;
+            if (tabela == null || tabela.Code != "Ok" || tabela.Distances.Count != n || tabela.Durations.Count != n)
+                throw new Exception("Não foi possível calcular a matriz de distâncias.");
+
+            // 4. Converter Metros para Km e Segundos para Minutos (sem caminho = distância em linha reta estimada)
+            var estimativa = HaversineMatrix.Build(pontos);
+            var distancias = new double[n, n];
+            var duracoes = new double[n, n];
+            for (var i = 0; i < n; i++)
+            {
+                for (var j = 0; j < n; j++)
+                {
+                    distancias[i, j] = tabela.Distances[i][j] is double m ? m / 1000.0 : estimativa.DistanciasKm[i, j];
+                    duracoes[i, j] = tabela.Durations[i][j] is double s ? s / 60.0 : estimativa.DuracoesMin[i, j];
+                }
+            }
+
+            return new RouteMatrix(distancias, duracoes, "osrm");
+        }
+        finally
+        {
+            // 5. Liberta o bloqueio para o próximo pedido avançar
+            _rateLimit.Release();
+        }
+    }
 }
