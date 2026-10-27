@@ -40,6 +40,16 @@ builder.Services.AddHttpClient<IOsrmService, OsrmService>(client =>
     client.DefaultRequestHeaders.Add("User-Agent", "LestoApp_UPCA/1.0");
 });
 
+// Cliente para o Nominatim (geocodificação de moradas em texto livre)
+var nominatimBaseUrl = Environment.GetEnvironmentVariable("NOMINATIM_BASE_URL")
+    ?? "https://nominatim.openstreetmap.org";
+builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>(client =>
+{
+    client.BaseAddress = new Uri(nominatimBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Add("User-Agent", "LestoApp_UPCA/1.0");
+});
+
 // 4. Adicionar suporte para Controladores
 builder.Services.AddControllers();
 

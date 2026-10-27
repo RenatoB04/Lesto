@@ -65,7 +65,7 @@ public class PaymentRulesTests
         await db.SaveChangesAsync();
 
         var identity = new Mock<IIdentityServiceClient>();
-        var controller = new OrdersController(db, new Mock<IOsrmService>().Object, identity.Object, NullLogger<OrdersController>.Instance);
+        var controller = new OrdersController(db, new Mock<IOsrmService>().Object, identity.Object, NullLogger<OrdersController>.Instance, new Mock<IGeocodingService>().Object);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext

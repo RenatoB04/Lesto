@@ -45,6 +45,12 @@ conformes ate a correcao e nova verificacao.
   encomendas; reembolsos so para Gestor/Administrador e apenas em encomendas
   rejeitadas.
 
+- [x] **Moradas em texto livre - 2026-10-26.** As moradas dos clientes ficam
+  guardadas como pontos fora do catalogo (`IsCatalog = false`); `GET /api/points`
+  devolve apenas o catalogo, por isso nenhum cliente ve moradas de outros. Ao
+  Nominatim e enviado apenas o texto da morada, sem identificacao do cliente.
+  Erros do Nominatim devolvem mensagem generica (`503`) e ficam apenas no log.
+
 ## Evidencias e seguimento
 
 As verificacoes referem-se ao codigo atual; credenciais presentes no historico

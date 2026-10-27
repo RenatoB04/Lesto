@@ -56,7 +56,9 @@ files or cloud configuration.
 
 | Method | Endpoint | Roles | Description |
 |---|---|---|---|
-| `GET` | `/api/points` | Authenticated | Lists active catalogue points. |
+| `GET` | `/api/points` | Authenticated | Lists catalogue points only (customer addresses are never listed). |
+| `GET` | `/api/routes/optimized?lat=..&lon=..` | Estafeta | Optimised stop order for the caller's `Validated`/`InTransit` orders; `lat`/`lon` (optional) is the start position. |
+| `GET` | `/api/geocode?q=...` | Cliente | Previews an address: returns `query`, `displayName`, `latitude`, `longitude`; `404` if not found. |
 | `POST` | `/api/orders` | Customer | Creates an order. |
 | `GET` | `/api/orders` | Authenticated | Returns orders filtered by caller role; Manager and Administrator may use `status`. |
 | `GET` | `/api/orders/{id}` | Owner, assigned Estafeta, Gestor, Administrador | Returns one order. |
@@ -82,6 +84,38 @@ files or cloud configuration.
   "recipientPhone": "+351900000000"
 }
 ```
+
+Each side accepts either a point id or an address (exactly one):
+
+```json
+{
+  "originAddress": "Avenida da Liberdade, Braga",
+  "destinationPointId": "00000000-0000-0000-0000-000000000002",
+  "weight": 3,
+  "type": "Normal",
+  "recipientData": "Example Recipient"
+}
+```
+
+### Optimised route response
+
+```json
+{
+  "source": "osrm",
+  "stops": [
+    { "sequence": 1, "orderId": "...", "type": "Recolha", "name": "Ponto Braga Centro", "latitude": 41.5503, "longitude": -8.42 },
+    { "sequence": 2, "orderId": "...", "type": "Entrega", "name": "Ponto IPCA", "latitude": 41.5367, "longitude": -8.6277 }
+  ],
+  "totalDistanceKm": 31.4,
+  "totalDurationMin": 38.2,
+  "baselineDistanceKm": 40.9,
+  "savingPercent": 23.2,
+  "googleMapsUrl": "https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=...&destination=...&waypoints=..."
+}
+```
+
+`source` is `estimativa` when OSRM was unavailable. `googleMapsUrl` is `null`
+for routes with more than 10 stops (Google Maps link limit).
 
 ### Update status request
 
@@ -155,6 +189,8 @@ otherwise they return `401` (`503` if the key is not configured).
 | `/api/orders/` | Order Service |
 | `/api/points/` | Order Service |
 | `/api/settings/` | Order Service |
+| `/api/geocode/` | Order Service |
+| `/api/routes/` | Order Service |
 | `/api/payments/webhook` | Payment Service (anonymous; Stripe signature checked by the service) |
 | `/api/payments/return/` | Payment Service (anonymous) |
 | `/api/payments/` | Payment Service (authenticated) |
@@ -170,6 +206,7 @@ otherwise they return `401` (`503` if the key is not configured).
 | `Jwt__Audience` | Gateway, Identity, Order | `lesto-api`. |
 | `IDENTITY_API_URL` | Order Service | Internal Identity Service URL. |
 | `OSRM_BASE_URL` | Order Service | OSRM routing endpoint. |
+| `NOMINATIM_BASE_URL` | Order Service | Nominatim endpoint (default `https://nominatim.openstreetmap.org`). |
 | `STRIPE_SECRET_KEY` | Payment Service | Stripe test secret key (`sk_test_...`); live keys are refused. |
 | `STRIPE_WEBHOOK_SECRET` | Payment Service | Webhook signing secret (`whsec_...`), e.g. from `stripe listen --print-secret`. |
 | `INTERNAL_API_KEY` | Order, Payment | Shared key for `/internal/...` endpoints. |
@@ -187,5 +224,6 @@ otherwise they return `401` (`503` if the key is not configured).
 | `401 Unauthorized` | Missing, invalid, or expired token. |
 | `403 Forbidden` | Authenticated user lacks permission. |
 | `404 Not Found` | Requested resource does not exist or is inaccessible. |
+| `422 Unprocessable Entity` | Free-text address not found by the geocoder. |
 | `409 Conflict` | Invalid order or payment state (e.g. assigning an unpaid order). |
-| `503 Service Unavailable` | OSRM, Stripe, or Order Service unavailable. |
+| `503 Service Unavailable` | OSRM, Nominatim, Stripe, or Order Service unavailable. |

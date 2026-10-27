@@ -483,6 +483,148 @@
           "response": []
         },
         {
+          "name": "Pré-visualizar Morada (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Morada encontrada\", function () {\r\n    pm.response.to.have.status(200);\r\n    pm.expect(pm.response.json().latitude).to.be.a(\"number\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/geocode?q=Avenida da Liberdade, Braga",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "geocode"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Avenida da Liberdade, Braga"
+                }
+              ]
+            },
+            "description": "Converte a morada em coordenadas (Nominatim) para o cliente confirmar o local antes de criar a encomenda."
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Encomenda 3 - Com Moradas (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Encomenda com moradas criada\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif (data.orderId) pm.environment.set(\"order_id_3\", data.orderId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"originAddress\": \"Avenida da Liberdade, Braga\",\r\n  \"destinationAddress\": \"Largo da Porta Nova, Barcelos\",\r\n  \"weight\": 3,\r\n  \"type\": \"Normal\",\r\n  \"recipientData\": \"Maria Costa\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Encomenda - Morada Inexistente (Cliente) - 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Morada não encontrada\", function () { pm.response.to.have.status(422); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_cliente}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"originAddress\": \"Rua Que Nao Existe 99999, Xpto\",\r\n  \"destinationAddress\": \"Avenida da Liberdade, Braga\",\r\n  \"weight\": 3,\r\n  \"type\": \"Normal\",\r\n  \"recipientData\": \"Teste\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Listar Encomendas (Gestor)",
           "event": [
             {
@@ -709,6 +851,57 @@
                 "assign"
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Rota Otimizada (Estafeta)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rota calculada\", function () {\r\n    pm.response.to.have.status(200);\r\n    var rota = pm.response.json();\r\n    pm.expect(rota.stops.length).to.be.above(0);\r\n    console.log(\"Fonte: \" + rota.source + \" | \" + rota.totalDistanceKm + \" km (ordem ingénua: \" + rota.baselineDistanceKm + \" km, poupança \" + rota.savingPercent + \"%)\");\r\n    if (rota.googleMapsUrl) console.log(\"Google Maps: \" + rota.googleMapsUrl);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_estafeta}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/routes/optimized?lat=41.5367&lon=-8.6277",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "routes",
+                "optimized"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "41.5367"
+                },
+                {
+                  "key": "lon",
+                  "value": "-8.6277"
+                }
+              ]
+            },
+            "description": "Ordena as recolhas e entregas das encomendas atribuídas ao estafeta (partida no IPCA). Com mais encomendas atribuídas ao mesmo estafeta a poupança face à ordem ingénua fica mais visível."
           },
           "response": []
         },

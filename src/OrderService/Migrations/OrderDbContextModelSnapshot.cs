@@ -88,6 +88,12 @@ namespace OrderService.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsCatalog")
+                        .HasColumnType("boolean");
+
                     b.Property<double>("Latitude")
                         .HasColumnType("double precision");
 
@@ -106,6 +112,7 @@ namespace OrderService.Migrations
                         new
                         {
                             Id = new Guid("d8b3c9a2-5f6e-4b1a-8c2d-9e7f3a1b4c6d"),
+                            IsCatalog = true,
                             Latitude = 41.5503,
                             Longitude = -8.4199999999999999,
                             Name = "Ponto Braga Centro"
@@ -113,6 +120,7 @@ namespace OrderService.Migrations
                         new
                         {
                             Id = new Guid("a1f4e7c2-9b8d-4a3f-6c5e-2b1d9a8c7e3f"),
+                            IsCatalog = true,
                             Latitude = 41.561399999999999,
                             Longitude = -8.3972999999999995,
                             Name = "Ponto Universidade Minho"
@@ -120,6 +128,7 @@ namespace OrderService.Migrations
                         new
                         {
                             Id = new Guid("c3e2d1f4-8a9b-4c7e-5d6f-3b2a1c9e8d7f"),
+                            IsCatalog = true,
                             Latitude = 41.536000000000001,
                             Longitude = -8.6250999999999998,
                             Name = "Ponto Barcelos"
@@ -127,6 +136,7 @@ namespace OrderService.Migrations
                         new
                         {
                             Id = new Guid("f9e8d7c6-b5a4-4f3e-2d1c-9b8a7c6e5d4f"),
+                            IsCatalog = true,
                             Latitude = 41.536700000000003,
                             Longitude = -8.6277000000000008,
                             Name = "Ponto IPCA"
@@ -134,6 +144,7 @@ namespace OrderService.Migrations
                         new
                         {
                             Id = new Guid("e5d4c3b2-a1f9-4e8d-7c6b-5a4f3e2d1c9b"),
+                            IsCatalog = true,
                             Latitude = 41.407899999999998,
                             Longitude = -8.5192999999999994,
                             Name = "Ponto Famalicão"
@@ -141,6 +152,7 @@ namespace OrderService.Migrations
                         new
                         {
                             Id = new Guid("b2a1c9e8-d7f6-4e5d-8c9b-0a1f2e3d4c5b"),
+                            IsCatalog = true,
                             Latitude = 41.444400000000002,
                             Longitude = -8.2960999999999991,
                             Name = "Ponto Guimarães"
