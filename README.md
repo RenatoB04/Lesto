@@ -3,69 +3,114 @@
 Lesto is a university project for managing last-mile deliveries through a
 small distributed REST API.
 
-## Architecture
+## What the project does
 
-The solution contains three .NET 10 services:
+The platform supports:
 
-- **API Gateway** - the single public entry point, implemented with YARP.
-- **Identity Service** - registration, login, JWT tokens and user roles.
-- **Order Service** - delivery points, orders and delivery status changes.
+- user registration, login and role-based access;
+- order creation using catalogue points or Portuguese free-text addresses;
+- distance and duration calculation through OSRM;
+- address geocoding through Nominatim;
+- configurable delivery pricing based on distance and weight;
+- payment checkout and refunds through Stripe test mode;
+- courier assignment and delivery status management;
+- courier route optimisation with pickup-before-delivery rules;
+- Docker Compose deployment with two Order Service instances.
 
-The services use separate PostgreSQL databases. The Order Service also
-integrates with OSRM to calculate route distance and duration.
+The project does not process real payments, store card data, provide live GPS
+tracking or send notifications.
 
-```text
-Client -> API Gateway -> Identity Service -> identitydb
-                     -> Order Service   -> orderdb
-                                           -> OSRM
-```
+## Services
 
-## Technologies
+| Service | Responsibility | Local port |
+|---|---|---:|
+| API Gateway | Public entry point and YARP reverse proxy | 5000 |
+| Identity Service | Registration, login, users and roles | 5001 |
+| Order Service 1 | Points, orders, pricing and routes | 5002 |
+| Order Service 2 | Second Order Service instance | 5003 |
+| Payment Service | Stripe checkout, confirmation and refunds | 5004 |
+| PostgreSQL | `identitydb`, `orderdb` and `paymentdb` | 5432 |
 
-- C# and ASP.NET Core on .NET 10
-- Entity Framework Core and PostgreSQL
-- JWT authentication and role-based authorization
-- YARP API Gateway
-- Docker Compose
-- xUnit, Moq and EF Core InMemory for tests
+Clients should normally call the API Gateway at `http://localhost:5000`.
+The other ports are published by Docker Compose for local development and
+demonstration only.
+
+## Main technologies
+
+- C# and ASP.NET Core on .NET 10;
+- Entity Framework Core and PostgreSQL;
+- ASP.NET Core Identity;
+- JWT authentication and role-based authorization;
+- YARP API Gateway;
+- Stripe Checkout in test mode;
+- OSRM and Nominatim;
+- Docker Compose;
+- xUnit, Moq and EF Core InMemory.
 
 ## Run locally
 
-1. Copy `.env.example` to `.env` and set the database, JWT and optional seed
-   credentials.
-2. Start the stack:
+1. Copy `.env.example` to `.env`.
+2. Set `POSTGRES_PASSWORD`, `JWT_SECRET`, `INTERNAL_API_KEY` and the Stripe
+   test variables. Seed account variables are optional.
+3. Start the stack from the repository root:
 
 ```powershell
 docker compose -f deploy\docker\docker-compose.yml up --build -d
 ```
 
-3. Use the API Gateway at `http://localhost:5000`.
+Check the containers:
 
-The local service ports are:
+```powershell
+docker compose -f deploy\docker\docker-compose.yml ps
+```
 
-| Service | Port |
-|---|---:|
-| API Gateway | 5000 |
-| Identity Service | 5001 |
-| Order Service instance 1 | 5002 |
-| Order Service instance 2 | 5003 |
-| PostgreSQL | 5432 |
+The API Gateway is available at `http://localhost:5000`.
+Swagger is available on the Identity, Order and Payment Services at:
 
-Swagger is available directly on the Identity and Order services during local
-development. Postman environments and the request collection are available in
-the [postman](postman) folder.
+- `http://localhost:5001/swagger`;
+- `http://localhost:5002/swagger`;
+- `http://localhost:5004/swagger`.
 
-## Run tests
+The Postman collection and environment are in [postman](postman).
+
+## Stripe test mode
+
+The Payment Service only accepts keys beginning with `sk_test_`. Configure:
+
+- `STRIPE_SECRET_KEY`;
+- `STRIPE_WEBHOOK_SECRET`;
+- `PUBLIC_BASE_URL`.
+
+For local webhook testing, run the Stripe CLI and use its signing secret in
+`STRIPE_WEBHOOK_SECRET`. Use Stripe test cards only. The application stores
+payment metadata, not card details.
+
+## Tests
+
+Run all tests:
 
 ```powershell
 dotnet test Lesto.slnx
 ```
 
+Build the solution:
+
+```powershell
+dotnet build Lesto.slnx
+```
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
-- [Requirements](docs/requirements.md)
+- [Requirements and business rules](docs/requirements.md)
 - [Technical contracts](docs/technical-contracts.md)
 - [Data model](docs/data-model.md)
+- [Sequence diagrams](docs/sequences.md)
+- [Architecture decisions](docs/decisions.md)
 - [Security notes](docs/seguranca.md)
+- [Scalability demonstration](docs/demo-escalabilidade.md)
 - [Cloud deployment commands](docs/cloud/comandos.md)
+- [OpenAPI documentation](docs/openapi/README.md)
+
+OpenAPI/Swagger documents are generated by the services at runtime. The
+current local Swagger endpoints are the authoritative API description.

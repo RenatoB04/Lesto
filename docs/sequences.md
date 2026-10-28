@@ -1,180 +1,112 @@
-# Sequence Diagrams
+# Sequence diagrams
 
-## 1. Login
+## Login
 
 ```mermaid
 sequenceDiagram
-    participant Client as API Client
+    participant Client as API client
     participant Gateway as API Gateway
     participant Identity as Identity Service
     participant Db as identitydb
-
     Client->>Gateway: POST /api/auth/login
     Gateway->>Identity: Forward request
     Identity->>Db: Find user and verify password
     Db-->>Identity: User and role
-    Identity-->>Gateway: accessToken, expiresAt, user
+    Identity-->>Gateway: JWT and user data
     Gateway-->>Client: 200 OK
 ```
 
-## 2. Create order
+## Create an order
 
 ```mermaid
 sequenceDiagram
-    participant Client as API Client
+    participant Client as Customer
     participant Gateway as API Gateway
     participant Order as Order Service
     participant Db as orderdb
+    participant Geo as Nominatim
     participant OSRM as OSRM
-
-    Client->>Gateway: POST /api/orders (Bearer customer token)
-    Gateway->>Order: Forward authenticated request
-    Order->>Order: Validate role, weight, and points
-    Order->>Db: Read origin, destination, and weight setting
-    Order->>OSRM: Route request with point coordinates
-    OSRM-->>Order: Distance and duration
-    Order->>Db: Persist Pending order
-    Order-->>Gateway: 201 Created
-    Gateway-->>Client: Created order
+    Client->>Gateway: POST /api/orders
+    Gateway->>Order: Forward JWT-authenticated request
+    Order->>Db: Read points and pricing settings
+    opt Free-text address not cached
+        Order->>Geo: Search address restricted to Portugal
+        Geo-->>Order: Coordinates and display name
+    end
+    Order->>OSRM: Calculate route distance and duration
+    OSRM-->>Order: Route data
+    Order->>Db: Save points and Pending/Unpaid order
+    Order-->>Client: 201 Created
 ```
 
-## 3. Assign order
+## Assign and deliver an order
 
 ```mermaid
 sequenceDiagram
-    participant Client as API Client
+    participant Client as Manager or courier
     participant Gateway as API Gateway
     participant Order as Order Service
     participant Identity as Identity Service
     participant Db as orderdb
-
     Client->>Gateway: POST /api/orders/{id}/assign
-    Gateway->>Order: Forward manager bearer token
-    Order->>Order: Validate manager role, Pending/Failed state, and Paid payment
-    Order->>Identity: GET /api/users/{courierId} (manager token)
-    Identity-->>Order: User profile and Estafeta role
-    Order->>Db: Store courier and set Validated
-    Order-->>Gateway: 200 OK
-    Gateway-->>Client: Updated order
-```
-
-## 4. Update delivery status
-
-```mermaid
-sequenceDiagram
-    participant Client as API Client
-    participant Gateway as API Gateway
-    participant Order as Order Service
-    participant Db as orderdb
-
+    Gateway->>Order: Forward manager JWT
+    Order->>Order: Validate state and Paid status
+    Order->>Identity: Validate courier role
+    Identity-->>Order: Courier is valid
+    Order->>Db: Save courier and Validated status
     Client->>Gateway: POST /api/orders/{id}/pickup
-    Gateway->>Order: Forward courier bearer token
-    Order->>Db: Load order
-    Order->>Order: Check assigned courier and Validated state
+    Gateway->>Order: Forward courier JWT
     Order->>Db: Save InTransit status
-    Order-->>Gateway: 200 OK
-    Gateway-->>Client: Updated order
-
     Client->>Gateway: POST /api/orders/{id}/deliver or /fail
-    Gateway->>Order: Forward courier bearer token
-    Order->>Order: Check assigned courier and InTransit state
-    Order->>Db: Save Delivered or Failed status
-    Order-->>Gateway: 200 OK
-    Gateway-->>Client: Updated order
+    Gateway->>Order: Forward courier JWT
+    Order->>Db: Save final status
 ```
 
-## 5. Pay an order (Stripe Checkout)
+## Pay an order
 
 ```mermaid
 sequenceDiagram
-    participant Client as API Client / Browser
+    participant Client as Customer
     participant Gateway as API Gateway
     participant Payment as Payment Service
     participant Order as Order Service
-    participant Stripe as Stripe (test mode)
+    participant Stripe as Stripe test mode
     participant Db as paymentdb
-
-    Client->>Gateway: POST /api/payments/checkout {orderId} (customer token)
-    Gateway->>Payment: Forward authenticated request
-    Payment->>Order: GET /internal/orders/{id} (X-Internal-Key)
-    Order-->>Payment: customerId, price, status, paymentStatus
-    Payment->>Payment: Check owner, Pending and Unpaid
-    Payment->>Stripe: Create Checkout Session (amount in cents)
-    Stripe-->>Payment: sessionId, checkout URL
-    Payment->>Db: Save Payment (Pending)
-    Payment-->>Client: 201 checkoutUrl
-    Client->>Stripe: Pay on the hosted page (card 4242 4242 4242 4242)
-    Stripe->>Gateway: POST /api/payments/webhook (signed event)
-    Gateway->>Payment: Forward (anonymous route)
-    Payment->>Payment: Verify Stripe-Signature
-    Payment->>Db: Mark Payment as Paid
-    Payment->>Order: POST /internal/orders/{id}/payment {Paid} (X-Internal-Key)
-    Order-->>Payment: 200 OK
-    Stripe-->>Client: Redirect to /api/payments/return/success
-    Note over Payment,Stripe: The return page and GET /api/payments/{orderId}<br/>query Stripe again, so a lost webhook is recovered.
+    Client->>Gateway: POST /api/payments/checkout
+    Gateway->>Payment: Forward customer JWT
+    Payment->>Order: GET /internal/orders/{id} with X-Internal-Key
+    Order-->>Payment: Price, owner, state and payment status
+    Payment->>Stripe: Create Checkout Session
+    Stripe-->>Payment: Session id and URL
+    Payment->>Db: Save Pending payment
+    Payment-->>Client: 201 checkout URL
+    Client->>Stripe: Complete hosted checkout
+    Stripe->>Gateway: Signed POST /api/payments/webhook
+    Gateway->>Payment: Forward webhook
+    Payment->>Db: Mark payment Paid
+    Payment->>Order: POST /internal/orders/{id}/payment
+    Order-->>Payment: Payment state updated
 ```
 
-## 6. Refund a rejected order
+The return page and `GET /api/payments/{orderId}` can query Stripe again when
+the webhook has not arrived.
+
+## Optimise a courier route
 
 ```mermaid
 sequenceDiagram
-    participant Client as API Client
-    participant Gateway as API Gateway
-    participant Payment as Payment Service
-    participant Order as Order Service
-    participant Stripe as Stripe (test mode)
-
-    Client->>Gateway: POST /api/payments/{orderId}/refund (manager token)
-    Gateway->>Payment: Forward authenticated request
-    Payment->>Order: GET /internal/orders/{id} (X-Internal-Key)
-    Order-->>Payment: status Rejected
-    Payment->>Stripe: Create refund for the PaymentIntent
-    Payment->>Order: POST /internal/orders/{id}/payment {Refunded}
-    Payment-->>Client: 200 OK
-```
-
-## 7. Create order with free-text addresses
-
-```mermaid
-sequenceDiagram
-    participant Client as API Client
-    participant Gateway as API Gateway
-    participant Order as Order Service
-    participant Db as orderdb
-    participant Nominatim as Nominatim
-    participant OSRM as OSRM
-
-    Client->>Gateway: POST /api/orders {originAddress, destinationAddress}
-    Gateway->>Order: Forward authenticated request
-    Order->>Db: Look for an already geocoded address
-    alt Address not stored yet
-        Order->>Nominatim: /search?q=...&countrycodes=pt (1 request/second)
-        Nominatim-->>Order: lat, lon, display_name
-    end
-    Order->>OSRM: Route request with the coordinates
-    OSRM-->>Order: Distance and duration
-    Order->>Db: Save new points and the Pending order (one transaction)
-    Order-->>Client: 201 Created (orderId, price)
-```
-
-## 8. Optimised courier route
-
-```mermaid
-sequenceDiagram
-    participant Client as Courier (API Client)
+    participant Courier as Courier
     participant Gateway as API Gateway
     participant Order as Order Service
     participant Db as orderdb
     participant OSRM as OSRM
-
-    Client->>Gateway: GET /api/routes/optimized?lat=..&lon=.. (courier token)
-    Gateway->>Order: Forward authenticated request
-    Order->>Db: Load the courier's Validated and InTransit orders
-    Order->>Order: Build stops (pickup + delivery, or delivery only)
-    Order->>OSRM: table/v1/driving with all stops (one request)
+    Courier->>Gateway: GET /api/routes/optimized
+    Gateway->>Order: Forward courier JWT
+    Order->>Db: Load Validated and InTransit orders
+    Order->>OSRM: Request distance matrix
     alt OSRM unavailable
-        Order->>Order: Haversine matrix (source = estimativa)
+        Order->>Order: Build Haversine estimate
     end
-    Order->>Order: Nearest neighbour + 2-opt with precedence
-    Order-->>Client: Ordered stops, km, minutes, saving %, Google Maps link
+    Order->>Order: Nearest neighbour and 2-opt
+    Order-->>Courier: Ordered stops and route metrics
 ```

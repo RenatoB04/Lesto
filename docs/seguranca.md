@@ -1,57 +1,46 @@
-# Revisao de seguranca
+# Revisão de segurança
 
-Revisao realizada em 2026-10-16. Esta checklist regista o estado encontrado no
-repositorio; itens com problemas identificados nao devem ser considerados
-conformes ate a correcao e nova verificacao.
+Este documento descreve as proteções implementadas no estado atual do
+projeto. Não substitui a rotação de segredos nem uma auditoria de produção.
 
 ## Checklist
 
-- [x] **Segredo JWT fora do Git - CONFORME NO CODIGO ATUAL.** Gateway,
-  Identity Service e Order Service exigem `JWT_SECRET` externa; o `.env` local
-  esta ignorado e nao esta versionado. Como uma chave predefinida esteve
-  versionada, rodar a chave antes da proxima utilizacao/deploy e verificar o
-  historico Git.
-- [x] **Credenciais de contas fora do Git - CONFORME NO CODIGO ATUAL.** Foram
-  removidas as contas e palavras-passe predefinidas. O administrador inicial e
-  opcional e so e criado quando `ADMIN_EMAIL` e `ADMIN_PASSWORD` sao fornecidos
-  fora do Git. Credenciais existentes em bases de dados persistentes devem ser
-  rodadas ou removidas; configurar variaveis de ambiente privadas no Postman.
-- [x] **Roles e autorizacao corretas nos endpoints revistos - CORRIGIDO.**
-  `GET /api/orders/{id}` permite ao cliente apenas a propria encomenda, ao
-  estafeta apenas encomendas atribuidas e a Gestor/Administrador acesso geral;
-  outras roles recebem `403`.
-- [x] **Erros sem detalhes internos - CORRIGIDO NOS ENDPOINTS REVISTOS.**
-  `OrdersController` e `TesteOsrmController` devolvem mensagens genericas para
-  falhas OSRM; a excecao completa e registada no log do servidor, nao na resposta.
-- [x] **Pesquisa de segredos no repositorio executada.** A pesquisa inicial nos
-  ficheiros versionados encontrou a chave JWT predefinida e credenciais fixas
-  do seeder e da colecao Postman. Foram removidas do codigo/documentacao atual
-  e substituidas por configuracao externa. O `.env` nao esta versionado.
-  Verificar novamente o historico Git e rodar quaisquer credenciais que tenham
-  sido utilizadas.
+- [x] `JWT_SECRET` é obrigatório e deve ser fornecido por `.env` ou pela
+  configuração do ambiente.
+- [x] As contas de seed são opcionais e só são criadas quando as respetivas
+  variáveis de ambiente são fornecidas.
+- [x] O Gateway e os serviços aplicam autenticação JWT e autorização por roles.
+- [x] As falhas de OSRM e Nominatim devolvem mensagens genéricas; os detalhes
+  ficam apenas nos logs do servidor.
+- [x] O Payment Service só aceita chaves Stripe de teste (`sk_test_`).
+- [x] O checkout usa a página alojada pelo Stripe; dados de cartão não passam
+  pelo Lesto.
+- [x] O webhook Stripe valida `Stripe-Signature` antes de processar eventos.
+- [x] Os endpoints `/internal/orders/...` não têm rota no Gateway e exigem
+  `X-Internal-Key`, comparada em tempo constante.
+- [x] Clientes só podem pagar e consultar as suas encomendas.
+- [x] Reembolsos exigem `Gestor` ou `Administrador` e uma encomenda rejeitada.
+- [x] Moradas livres usam `IsCatalog = false` e não aparecem em
+  `GET /api/points`.
 
-- [x] **Pagamentos (Stripe) - 2026-10-26.** A chave `STRIPE_SECRET_KEY` e o
-  `STRIPE_WEBHOOK_SECRET` existem apenas no `.env`; o Payment Service recusa
-  arrancar com chaves que nao sejam de teste (`sk_test_`). O pagamento e feito
-  na pagina alojada pelo Stripe, por isso nenhum dado de cartao passa pelo Lesto.
-- [x] **Webhook autenticado.** `POST /api/payments/webhook` e anonimo no
-  Gateway, mas o servico verifica a assinatura `Stripe-Signature`; pedidos sem
-  assinatura valida recebem `400`. A pagina de regresso nao confia no
-  `session_id` do URL: confirma sempre o estado junto do Stripe.
-- [x] **Comunicacao entre servicos.** Os endpoints `/internal/orders/...` nao
-  tem rota no Gateway e exigem `X-Internal-Key` igual a `INTERNAL_API_KEY`,
-  comparada em tempo constante; sem chave configurada devolvem `503`.
-- [x] **Autorizacao dos pagamentos.** O cliente so paga e consulta as proprias
-  encomendas; reembolsos so para Gestor/Administrador e apenas em encomendas
-  rejeitadas.
+## Configuração de segredos
 
-- [x] **Moradas em texto livre - 2026-10-26.** As moradas dos clientes ficam
-  guardadas como pontos fora do catalogo (`IsCatalog = false`); `GET /api/points`
-  devolve apenas o catalogo, por isso nenhum cliente ve moradas de outros. Ao
-  Nominatim e enviado apenas o texto da morada, sem identificacao do cliente.
-  Erros do Nominatim devolvem mensagem generica (`503`) e ficam apenas no log.
+O ficheiro `.env` é local e não deve ser versionado. Segredos que tenham sido
+usados no passado devem ser rodados antes de um novo deployment.
 
-## Evidencias e seguimento
+As variáveis mais sensíveis são:
 
-As verificacoes referem-se ao codigo atual; credenciais presentes no historico
-Git exigem rotacao e nao sao removidas por estas alteracoes.
+- `JWT_SECRET`;
+- `POSTGRES_PASSWORD`;
+- `INTERNAL_API_KEY`;
+- `STRIPE_SECRET_KEY`;
+- `STRIPE_WEBHOOK_SECRET`;
+- passwords das contas de seed.
+
+## Limitações conhecidas
+
+O Compose publica portas internas para facilitar o desenvolvimento local.
+Num deployment cloud, apenas o Gateway deve ser exposto publicamente. O
+projeto também não possui rate limiting global, retries, circuit breakers,
+tracing distribuído ou rotação automática da chave interna. Estas são
+limitações conscientes do âmbito académico.

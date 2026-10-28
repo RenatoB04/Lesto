@@ -1,67 +1,72 @@
-# Evidências de Comandos - Fase 5 (Cloud)
+# Deployment cloud com Azure e Docker Compose
 
-## 1. Criação da Infraestrutura no Azure
+Este documento descreve um deployment académico numa VM Linux. Não inclui
+configuração de produção, gestão de segredos ou certificados de uma autoridade
+certificadora.
+
+## 1. Criar a VM
 
 ```bash
-# Iniciar sessão e definir subscrição
 az login
 az account set --subscription "Azure for Students"
-
-# Criar grupo de recursos na região Sweden Central (opção mais económica com disponibilidade)
 az group create --name rg-lesto --location swedencentral
-
-# Criar Máquina Virtual 
-# Nota: Utilizado o tamanho Standard_B2als_v2 devido a restrições de capacidade (Capacity Restrictions / SkuNotAvailable) no modelo B2s.
 az vm create \
   --resource-group rg-lesto \
   --name vm-lesto \
   --image Ubuntu2404 \
   --size Standard_B2als_v2 \
   --admin-username lesto \
-  --ssh-key-values C:\Users\Legion\.ssh\lesto_vm.pub \
+  --ssh-key-values ~/.ssh/lesto_vm.pub \
   --public-ip-sku Standard
-
-# Aceder à VM por SSH
-ssh -i C:\Users\Legion\.ssh\lesto_vm lesto@<IP_PUBLICO>
-
+ssh -i ~/.ssh/lesto_vm lesto@<PUBLIC_IP>
 ```
 
-## 2. Preparação do Ambiente e Certificados (na VM)
+## 2. Preparar a VM
 
 ```bash
-# Atualizar sistema e instalar Docker
 sudo apt update && sudo apt upgrade -y
-curl -fsSL [https://get.docker.com](https://get.docker.com) | sudo sh
-sudo usermod -aG docker $USER
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"
+git clone <REPOSITORY_URL> ~/lesto
+cd ~/lesto
+```
 
-# Navegar para a pasta de deploy
-cd ~/lesto/deploy/docker
+Crie `~/lesto/.env` com valores privados. Use uma nova chave JWT, uma
+password forte para PostgreSQL, uma `INTERNAL_API_KEY` aleatória e chaves
+Stripe de teste:
 
-# Criar ficheiro .env com as credenciais e nova chave JWT gerada
-cat > ../../.env << 'EOF'
+```text
 POSTGRES_USER=example_user
-POSTGRES_PASSWORD=replace_with_a_strong_database_password
-JWT_SECRET=replace_with_a_random_secret_of_at_least_32_characters
-ADMIN_EMAIL=admin@example.test
-ADMIN_PASSWORD=replace_with_admin_password
-GESTOR_EMAIL=gestor@example.test
-GESTOR_PASSWORD=replace_with_gestor_password
-ESTAFETA_EMAIL=estafeta@example.test
-ESTAFETA_PASSWORD=replace_with_estafeta_password
-CLIENTE_EMAIL=cliente@example.test
-CLIENTE_PASSWORD=replace_with_cliente_password
-EOF
+POSTGRES_PASSWORD=<strong-password>
+JWT_SECRET=<random-secret-at-least-32-characters>
+INTERNAL_API_KEY=<random-internal-key>
+OSRM_BASE_URL=https://router.project-osrm.org
+NOMINATIM_BASE_URL=https://nominatim.openstreetmap.org
+STRIPE_SECRET_KEY=sk_test_<test-key>
+STRIPE_WEBHOOK_SECRET=whsec_<webhook-secret>
+PUBLIC_BASE_URL=https://<PUBLIC_IP>:8443
+```
 
-# Gerar certificados HTTPS autoassinados para o Gateway
+As variáveis de seed (`ADMIN_*`, `GESTOR_*`, `ESTAFETA_*` e `CLIENTE_*`) são
+opcionais.
+
+## 3. HTTPS no Gateway
+
+Para a demonstração, pode ser usado um certificado autoassinado:
+
+```bash
+cd ~/lesto/deploy/docker
 mkdir -p certs
 IP_PUBLICO=$(curl -s ifconfig.me)
 openssl req -x509 -newkey rsa:2048 -nodes \
   -keyout certs/tls.key -out certs/tls.crt -days 365 \
   -subj "/CN=$IP_PUBLICO" \
   -addext "subjectAltName=IP:$IP_PUBLICO"
+```
 
-# Criar ficheiro de sobreposição (override) do docker-compose para expor a porta 8443 com os certificados
-cat > docker-compose.override.yml << 'EOF'
+Crie `deploy/docker/docker-compose.override.yml`:
+
+```yaml
 services:
   api-gateway:
     ports:
@@ -69,41 +74,41 @@ services:
     volumes:
       - ./certs:/tls:ro
     environment:
-      - ASPNETCORE_HTTPS_PORTS=8443
-      - Kestrel__Certificates__Default__Path=/tls/tls.crt
-      - Kestrel__Certificates__Default__KeyPath=/tls/tls.key
-EOF
-
+      ASPNETCORE_HTTPS_PORTS: 8443
+      Kestrel__Certificates__Default__Path: /tls/tls.crt
+      Kestrel__Certificates__Default__KeyPath: /tls/tls.key
 ```
 
-> Em deployment cloud, publique apenas o Gateway. As portas internas do
-> PostgreSQL, Identity Service e Order Service não devem ser abertas no NSG.
+Em cloud, publique no firewall apenas a porta `8443`. Não abra as portas
+5432, 5001, 5002, 5003 ou 5004.
 
-## 3. Publicação da Stack Docker
+## 4. Iniciar os serviços
+
+Execute a partir de `~/lesto/deploy/docker`:
 
 ```bash
-# Iniciar a base de dados
 docker compose up postgres -d
-
-# Compilar e iniciar serviços sequencialmente para evitar esgotamento de memória (OOM) na VM
 docker compose up identity-service --build -d
 docker compose up order-service-1 --build -d
 docker compose up order-service-2 -d
+docker compose up payment-service --build -d
 docker compose up api-gateway --build -d
-
-# Validar contentores em execução
 docker compose ps
+```
 
-# Verificar o estado do Gateway
+Verifique o Gateway:
+
+```bash
 curl -k https://localhost:8443/health/live
-
-# Consultar os logs recentes do Gateway
-docker compose logs --tail=100 api-gateway
-
+docker compose logs --tail=100 api-gateway payment-service
 ```
 
-Para executar os testes localmente:
+O webhook Stripe deve apontar para:
 
-```powershell
-dotnet test Lesto.slnx
+```text
+https://<PUBLIC_IP>:8443/api/payments/webhook
 ```
+
+Um certificado autoassinado pode impedir a entrega normal de webhooks Stripe;
+nesse caso, use o Stripe CLI para desenvolvimento local ou um certificado
+confiável.

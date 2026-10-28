@@ -1,149 +1,109 @@
-# Data Model
+# Data model
 
-## 1. Boundaries
+## Database boundaries
 
-Identity Service, Order Service, and Payment Service use separate PostgreSQL databases. There are
-no foreign keys between services. Order Service stores selected user details as
-a snapshot where needed, so an Identity user deletion does not invalidate past
-orders.
+The services own separate PostgreSQL databases:
 
-## 2. Identity Service
+- Identity Service: `identitydb`;
+- Order Service: `orderdb`;
+- Payment Service: `paymentdb`.
 
-Identity Service uses ASP.NET Core Identity with `Guid` keys. `AppUser` extends
-the standard user with `DisplayName`.
+There are no foreign keys between services. Cross-service identifiers are
+stored as `Guid` values and are validated through HTTP calls when necessary.
 
-| Field | Type | Notes |
+## Identity Service
+
+ASP.NET Core Identity stores users, roles and authentication data.
+
+The application user adds:
+
+| Field | Type | Description |
 |---|---|---|
-| `Id` | `Guid` | Primary key. |
-| `Email` | `string` | Unique login identifier. |
-| `DisplayName` | `string` | User-facing name. |
-| `Role` | `string` | `Cliente`, `Estafeta`, `Gestor`, or `Administrador`. |
+| `Id` | `Guid` | User identifier |
+| `Email` | `string` | Login email |
+| `DisplayName` | `string` | Display name |
 
-Role storage follows the standard ASP.NET Core Identity tables. The
-implementation currently uses the Portuguese role names `Cliente`, `Estafeta`,
-`Gestor` and `Administrador`.
+Roles used by the application are `Cliente`, `Estafeta`, `Gestor` and
+`Administrador`.
 
-## 3. Order Service
+## Order Service
 
-### DeliveryPoint
+### Point
 
-The catalogue contains a small, seeded list of selectable origins and
-destinations. Coordinates are stored locally and are the only data sent to
-OSRM.
-
-| Field | Type | Notes |
+| Field | Type | Description |
 |---|---|---|
-| `Id` | `Guid` | Primary key. |
-| `Name` | `string` | Display name returned by the API. |
-| `AddressLabel` | `string` | Read-only descriptive label. |
-| `Latitude` | `decimal` | WGS84 latitude. |
-| `Longitude` | `decimal` | WGS84 longitude. |
-| `IsActive` | `bool` | Controls whether the point can be selected. |
+| `Id` | `Guid` | Primary key |
+| `Name` | `string` | Catalogue or geocoder display name |
+| `Latitude` | `double` | WGS84 latitude |
+| `Longitude` | `double` | WGS84 longitude |
+| `IsCatalog` | `bool` | Whether the point belongs to the public catalogue |
+| `Address` | `string?` | Normalised free-text address, when applicable |
 
-Implemented `Point` fields for free-text addresses:
+Catalogue points are seeded. Points created from customer addresses have
+`IsCatalog = false` and are not returned by `GET /api/points`.
 
-| Field | Type | Notes |
+### Order
+
+| Field | Type | Description |
 |---|---|---|
-| `IsCatalog` | `bool` | `true` for the seeded catalogue; `false` for points created from a customer address. |
-| `Address` | `string?` | Normalised address typed by the customer (used to reuse the point). |
-| `Name` | `string` | For address points, the place name returned by Nominatim. |
+| `Id` | `Guid` | Primary key |
+| `CustomerId` | `Guid` | Identity user identifier |
+| `CourierId` | `Guid?` | Assigned courier, if any |
+| `OriginPointId` | `Guid` | Origin point foreign key |
+| `DestinationPointId` | `Guid` | Destination point foreign key |
+| `Weight` | `double` | Order weight |
+| `Type` | `string` | Order type |
+| `RecipientData` | `string` | Recipient information |
+| `Status` | `OrderStatus` | Current delivery status |
+| `Reason` | `string?` | Rejection or failure reason |
+| `Distance` | `double` | Calculated route distance |
+| `Duration` | `double` | Calculated route duration |
+| `Price` | `decimal(10,2)` | Price in EUR, fixed at creation |
+| `PaymentStatus` | `PaymentStatus` | `Unpaid`, `Paid` or `Refunded` |
+| `PaidAt` | `DateTime?` | Payment confirmation time |
 
-### DeliveryOrder
+Order statuses are `Pending`, `Validated`, `Rejected`, `InTransit`,
+`Delivered` and `Failed`.
 
-| Field | Type | Notes |
+### Setting
+
+| Field | Type | Description |
 |---|---|---|
-| `Id` | `Guid` | Primary key. |
-| `CustomerId` | `Guid` | Identity user identifier; no cross-service foreign key. |
-| `CustomerEmail` | `string` | Snapshot for display and audit. |
-| `OriginPointId` | `Guid` | Local foreign key to `DeliveryPoint`. |
-| `DestinationPointId` | `Guid` | Local foreign key to `DeliveryPoint`. |
-| `WeightKg` | `decimal(8,2)` | Validated against the setting. |
-| `Type` | `string` | `Document`, `Package`, `Fragile`, or `Bulky`. |
-| `Description` | `string?` | Optional order description. |
-| `RecipientName` | `string` | Delivery recipient. |
-| `RecipientPhone` | `string` | Delivery recipient contact. |
-| `DistanceMeters` | `int` | Result returned by OSRM. |
-| `DurationSeconds` | `int` | Result returned by OSRM. |
-| `Status` | `string` | Order state. |
-| `CourierId` | `Guid?` | Assigned Identity user identifier. |
-| `CourierName` | `string?` | Snapshot at assignment time. |
-| `Reason` | `string?` | Rejection or delivery failure reason. |
-| `CreatedAt` | `DateTimeOffset` | UTC timestamp. |
-| `AssignedAt` | `DateTimeOffset?` | UTC timestamp. |
-| `DeliveredAt` | `DateTimeOffset?` | UTC timestamp. |
-| `UpdatedAt` | `DateTimeOffset` | UTC timestamp. |
+| `Key` | `string` | Primary key |
+| `Value` | `string` | Configured value |
 
-Payment fields added to the order:
+Seeded settings are `PesoMaximoKg`, `PrecoBaseEur`, `PrecoPorKmEur` and
+`PrecoPorKgEur`.
 
-| Field | Type | Notes |
-|---|---|---|
-| `Price` | `numeric(10,2)` | Price in EUR, calculated at creation time. |
-| `PaymentStatus` | `int` (enum) | `Unpaid`, `Paid`, or `Refunded`; changed only by Payment Service. |
-| `PaidAt` | `DateTime?` | UTC timestamp of the payment confirmation. |
-
-### SystemSetting
-
-| Field | Type | Notes |
-|---|---|---|
-| `Key` | `string` | Primary key; seeded with `PesoMaximoKg`, `PrecoBaseEur`, `PrecoPorKmEur`, and `PrecoPorKgEur`. |
-| `Value` | `string` | Stored configuration value. |
-
-## 4. Payment Service
+## Payment Service
 
 ### Payment
 
-One row per payment attempt (Stripe Checkout Session). An order can have
-several attempts, but at most one reaches `Paid`.
+Each row represents a Stripe Checkout payment attempt.
 
-| Field | Type | Notes |
+| Field | Type | Description |
 |---|---|---|
-| `Id` | `Guid` | Primary key; also sent to Stripe as metadata. |
-| `OrderId` | `Guid` | Order identifier; no cross-service foreign key. Indexed. |
-| `CustomerId` | `Guid` | Identity user who started the payment. |
-| `AmountCents` | `long` | Amount in cents, as Stripe expects. |
-| `Currency` | `string(3)` | `eur`. |
-| `StripeSessionId` | `string` | Checkout Session id; unique index. |
-| `StripePaymentIntentId` | `string?` | Needed for refunds. |
-| `Status` | `string` | `Pending`, `Paid`, `Expired`, or `Refunded`. |
-| `CreatedAt` | `DateTime` | UTC timestamp. |
-| `PaidAt` | `DateTime?` | UTC timestamp. |
-| `RefundedAt` | `DateTime?` | UTC timestamp. |
+| `Id` | `Guid` | Primary key and Stripe metadata |
+| `OrderId` | `Guid` | Order identifier |
+| `CustomerId` | `Guid` | Customer identifier |
+| `AmountCents` | `long` | Amount sent to Stripe |
+| `Currency` | `string` | Currently `eur` |
+| `StripeSessionId` | `string` | Stripe Checkout Session identifier |
+| `StripePaymentIntentId` | `string?` | Payment Intent used for refunds |
+| `Status` | `PaymentRecordStatus` | `Pending`, `Paid`, `Expired` or `Refunded` |
+| `CreatedAt` | `DateTime` | Creation time in UTC |
+| `PaidAt` | `DateTime?` | Confirmation time in UTC |
+| `RefundedAt` | `DateTime?` | Refund time in UTC |
 
-## 5. Entity relationship diagram
+An order may have more than one payment attempt. The application uses the
+latest relevant payment when returning payment status.
 
-```mermaid
-erDiagram
-    DELIVERY_POINT ||--o{ DELIVERY_ORDER : "origin"
-    DELIVERY_POINT ||--o{ DELIVERY_ORDER : "destination"
-    DELIVERY_POINT {
-        uuid id PK
-        string name
-        string address_label
-        decimal latitude
-        decimal longitude
-        boolean is_active
-    }
-    DELIVERY_ORDER {
-        uuid id PK
-        uuid customer_id
-        uuid origin_point_id FK
-        uuid destination_point_id FK
-        decimal weight_kg
-        string status
-        uuid courier_id
-        int distance_meters
-        int duration_seconds
-        datetime created_at
-    }
-    SYSTEM_SETTING {
-        string key PK
-        string value
-    }
-```
+## Data conventions
 
-## 6. Data conventions
-
-- All identifiers use `Guid`.
-- All timestamps use `DateTimeOffset` in UTC.
+- Identifiers use `Guid`.
 - API JSON uses camelCase.
-- API enum-like values use the English strings documented in this repository.
+- Prices are represented in euros in the Order API and in cents internally
+  for Stripe requests.
+- The current implementation uses UTC `DateTime` for payment timestamps and
+  `PaidAt`; this is an implementation detail to keep in mind when exporting
+  data.

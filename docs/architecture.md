@@ -1,98 +1,98 @@
 # Architecture
 
-## 1. Architectural style
+## Overview
 
-Lesto uses a microservices architecture with a single API Gateway. The three
-business services are independently deployable and own their data. They use
-synchronous REST communication because the reduced scope does not require
-asynchronous processing.
+Lesto uses four independently deployable .NET services:
+
+1. API Gateway;
+2. Identity Service;
+3. Order Service;
+4. Payment Service.
+
+The services communicate through synchronous HTTP APIs and do not share
+databases. Docker Compose starts two instances of the Order Service behind the
+Gateway.
 
 ```mermaid
 flowchart LR
-    Consumer["API Consumers\nSwagger UI / Postman"] -->|HTTPS / REST| Gateway["API Gateway\nYARP"]
-    Gateway -->|REST| Identity["Identity Service"]
-    Gateway -->|REST| Order["Order Service"]
-    Order -->|REST, internal network| Identity
-    Identity --> IdentityDb[("identitydb\nPostgreSQL")]
-    Order --> OrderDb[("orderdb\nPostgreSQL")]
-    Order -->|HTTPS / REST| Osrm["OSRM public routing service"]
-    Order -->|HTTPS / REST| Nominatim["Nominatim geocoding (OpenStreetMap)"]
-    Gateway -->|REST| Payment["Payment Service"]
-    Payment -->|REST, internal network\nX-Internal-Key| Order
-    Payment --> PaymentDb[("paymentdb\nPostgreSQL")]
-    Payment -->|HTTPS / REST| Stripe["Stripe API (test mode)"]
+    Client["API client"] --> Gateway["API Gateway\nYARP"]
+    Gateway --> Identity["Identity Service"]
+    Gateway --> Order["Order Service x2"]
+    Gateway --> Payment["Payment Service"]
+    Identity --> IdentityDb[("identitydb")]
+    Order --> OrderDb[("orderdb")]
+    Payment --> PaymentDb[("paymentdb")]
+    Order --> OSRM["OSRM"]
+    Order --> Nominatim["Nominatim"]
+    Payment --> Stripe["Stripe test mode"]
+    Payment -->|X-Internal-Key| Order
     Stripe -->|Signed webhook| Gateway
 ```
 
-## 2. Components
+## Components
 
-| Component | Responsibility | Publicly exposed | Data ownership |
-|---|---|---:|---|
-| API Gateway | Single entry point, routing, JWT validation, and HTTPS termination. | Yes | None. |
-| Identity Service | Registration, login, JWT issuance, user and role management. | No | `identitydb`. |
-| Order Service | Delivery points, orders, order state machine, weight and pricing settings, geocoding, courier route optimisation, and statistics. | No | `orderdb`. |
-| Payment Service | Stripe Checkout sessions, payment confirmation (webhook and query), refunds. | No | `paymentdb`. |
-| OSRM | External route distance and duration calculation. | External provider | None. |
-| Nominatim | External geocoding of free-text addresses (Portugal only). | External provider | None. |
-| Stripe | External payment processing in test mode. | External provider | Card data stays at Stripe. |
-
-One PostgreSQL container hosts three logical databases during development:
-`identitydb`, `orderdb`, and `paymentdb`. Each service uses only its own connection string.
-
-## 3. Communication
-
-- API consumers call only the API Gateway.
-- Gateway-to-service and service-to-service communication uses REST over the
-  private Docker network.
-- Order Service calls Identity Service only to validate a selected courier at
-  assignment time.
-- For route optimisation, Order Service makes one OSRM `table` request with all
-  the courier's stops; the ordering itself is computed locally.
-- Order Service calls Nominatim only for free-text addresses that were not
-  geocoded before, then calls OSRM with the resolved coordinates.
-- Payment Service calls Order Service's internal endpoints
-  (`/internal/orders/{id}` and `/internal/orders/{id}/payment`) with the
-  `X-Internal-Key` header. These endpoints have no Gateway route.
-- Payment Service calls Stripe to create Checkout Sessions, read their status,
-  and create refunds. Stripe calls back through the Gateway route
-  `/api/payments/webhook`, which is anonymous but signature-verified.
-- There is no event broker, notification service, or direct database sharing.
-
-## 4. Security design
-
-- Identity Service issues 60-minute HS256 JWT access tokens.
-- The Gateway and both services validate token signature, issuer, audience, and
-  expiry. Each service also applies role authorization locally.
-- The JWT secret is supplied through environment variables or cloud settings;
-  it is never committed to Git.
-- Only Gateway publishes host ports. PostgreSQL, Identity Service, and Order
-  Service are reachable only on the internal Compose network.
-- HTTPS is terminated by Gateway in cloud deployment. Development may use HTTP
-  only on localhost.
-
-## 5. Scalability and maintenance demonstration
-
-Docker Compose runs two Order Service containers from the same image:
-`order-service-1` and `order-service-2`. YARP uses both as destinations and
-round-robins requests. Each response includes `X-Served-By` so the presentation
-can demonstrate distribution. Restarting one Order Service container while the
-other remains available demonstrates basic maintenance resilience.
-
-## 6. Deployment environments
-
-| Environment | Runtime | Public access |
+| Component | Responsibility | Data |
 |---|---|---|
-| Local development | Docker Compose | Gateway on `http://localhost:5000`. |
-| Cloud demonstration | Linux VM with Docker Compose | Gateway on HTTPS port `8443`; restricted firewall rule. |
+| API Gateway | Public entry point, routing, JWT validation and load balancing | None |
+| Identity Service | Registration, login, users, roles and JWT issuance | `identitydb` |
+| Order Service | Points, orders, pricing, geocoding and route optimisation | `orderdb` |
+| Payment Service | Checkout, payment confirmation and refunds | `paymentdb` |
+| OSRM | Road distance, duration and distance matrices | External |
+| Nominatim | Portuguese free-text address geocoding | External |
+| Stripe | Test payment processing | External |
 
-## 7. Architecture decisions
+One PostgreSQL container hosts the three logical databases during local
+development. Each service only uses its own database.
 
-- Three business services (Identity, Order, Payment) demonstrate a
-  microservices design with separate data ownership and service-to-service
-  calls in both directions of trust (user token and internal key).
-- The point catalogue is kept, and free-text addresses are offered as an
-  alternative; only the address text is sent to Nominatim, never the customer's
-  identity.
-- OSRM provides a relevant external integration without route optimisation.
-- Docker Compose is used instead of Kubernetes because the assignment asks for
-  scalability and maintenance scenarios but does not mandate Kubernetes.
+## Communication
+
+- Clients normally call the Gateway.
+- The Gateway routes `/api/auth`, `/api/users`, `/api/orders`,
+  `/api/points`, `/api/settings`, `/api/geocode`, `/api/routes` and
+  `/api/payments`.
+- Order Service calls Identity Service to validate a courier during assignment.
+- Order Service calls Nominatim for new free-text addresses and OSRM for route
+  distance and duration.
+- Payment Service calls the Order Service internal endpoints using
+  `X-Internal-Key`.
+- Stripe sends signed webhooks to `/api/payments/webhook`.
+- No service accesses another service's database.
+
+## Authentication and security
+
+- Identity Service issues HS256 JWTs with a 60-minute lifetime.
+- The Gateway and backend services validate the same issuer, audience and
+  signing key.
+- Roles are `Cliente`, `Estafeta`, `Gestor` and `Administrador`.
+- Internal payment/order calls use `X-Internal-Key` and are not routed by the
+  Gateway.
+- Stripe card details remain with Stripe.
+- Secrets are supplied through `.env` or deployment configuration.
+
+The local Compose file publishes service ports to simplify development. A
+cloud deployment should expose only the Gateway and keep the other services
+inside the private Docker network.
+
+## Scalability demonstration
+
+`order-service-1` and `order-service-2` use the same image. YARP distributes
+Gateway requests using Round Robin. The response header `X-Served-By` can be
+used to identify the responding instance.
+
+This demonstrates horizontal deployment, but it is not transparent failover:
+the current Gateway configuration has no retry or circuit-breaker policy.
+
+## Deployment
+
+| Environment | Runtime | Public endpoint |
+|---|---|---|
+| Local | Docker Compose | `http://localhost:5000` |
+| Cloud demonstration | Linux VM and Docker Compose | HTTPS Gateway, normally port `8443` |
+
+The cloud procedure is documented in [cloud/comandos.md](cloud/comandos.md).
+
+## Scope limitations
+
+The project intentionally does not include a message broker, asynchronous
+processing, distributed tracing, metrics, CI/CD, live tracking or production
+payment keys. These are possible future improvements, not required features.
