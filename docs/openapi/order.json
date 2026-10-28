@@ -5,6 +5,27 @@
     "version": "v1"
   },
   "paths": {
+    "/api/Geocode": {
+      "get": {
+        "tags": [
+          "Geocode"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Orders": {
       "post": {
         "tags": [
@@ -262,6 +283,36 @@
         }
       }
     },
+    "/api/Routes/optimized": {
+      "get": {
+        "tags": [
+          "Routes"
+        ],
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Settings": {
       "get": {
         "tags": [
@@ -345,11 +396,21 @@
         "properties": {
           "originPointId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
           },
           "destinationPointId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
+          },
+          "originAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "destinationAddress": {
+            "type": "string",
+            "nullable": true
           },
           "weight": {
             "type": "number",
@@ -413,10 +474,16 @@
   ],
   "tags": [
     {
+      "name": "Geocode"
+    },
+    {
       "name": "Orders"
     },
     {
       "name": "Points"
+    },
+    {
+      "name": "Routes"
     },
     {
       "name": "Settings"
