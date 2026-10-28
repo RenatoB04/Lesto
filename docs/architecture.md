@@ -89,7 +89,8 @@ the current Gateway configuration has no retry or circuit-breaker policy.
 | Local | Docker Compose | `http://localhost:5000` |
 | Cloud demonstration | Linux VM and Docker Compose | HTTPS Gateway, normally port `8443` |
 
-The cloud procedure is documented in [cloud/comandos.md](cloud/comandos.md).
+The cloud procedure is documented in
+[cloud/deployment-commands.md](cloud/deployment-commands.md).
 
 ## Scope limitations
 

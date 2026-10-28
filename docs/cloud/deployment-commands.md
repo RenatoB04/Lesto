@@ -1,10 +1,10 @@
-# Deployment cloud com Azure e Docker Compose
+# Cloud deployment with Azure and Docker Compose
 
-Este documento descreve um deployment académico numa VM Linux. Não inclui
-configuração de produção, gestão de segredos ou certificados de uma autoridade
-certificadora.
+This document describes an academic deployment on a Linux VM. It does not
+include production configuration, secret management or certificates issued by
+a trusted certificate authority.
 
-## 1. Criar a VM
+## 1. Create the VM
 
 ```bash
 az login
@@ -21,7 +21,7 @@ az vm create \
 ssh -i ~/.ssh/lesto_vm lesto@<PUBLIC_IP>
 ```
 
-## 2. Preparar a VM
+## 2. Prepare the VM
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -31,9 +31,8 @@ git clone <REPOSITORY_URL> ~/lesto
 cd ~/lesto
 ```
 
-Crie `~/lesto/.env` com valores privados. Use uma nova chave JWT, uma
-password forte para PostgreSQL, uma `INTERNAL_API_KEY` aleatória e chaves
-Stripe de teste:
+Create `~/lesto/.env` with private values. Use a new JWT secret, a strong
+PostgreSQL password, a random `INTERNAL_API_KEY` and Stripe test keys:
 
 ```text
 POSTGRES_USER=example_user
@@ -47,24 +46,24 @@ STRIPE_WEBHOOK_SECRET=whsec_<webhook-secret>
 PUBLIC_BASE_URL=https://<PUBLIC_IP>:8443
 ```
 
-As variáveis de seed (`ADMIN_*`, `GESTOR_*`, `ESTAFETA_*` e `CLIENTE_*`) são
-opcionais.
+Seed variables (`ADMIN_*`, `GESTOR_*`, `ESTAFETA_*` and `CLIENTE_*`) are
+optional.
 
-## 3. HTTPS no Gateway
+## 3. Configure HTTPS on the Gateway
 
-Para a demonstração, pode ser usado um certificado autoassinado:
+For the demonstration, a self-signed certificate can be used:
 
 ```bash
 cd ~/lesto/deploy/docker
 mkdir -p certs
-IP_PUBLICO=$(curl -s ifconfig.me)
+PUBLIC_IP=$(curl -s ifconfig.me)
 openssl req -x509 -newkey rsa:2048 -nodes \
   -keyout certs/tls.key -out certs/tls.crt -days 365 \
-  -subj "/CN=$IP_PUBLICO" \
-  -addext "subjectAltName=IP:$IP_PUBLICO"
+  -subj "/CN=$PUBLIC_IP" \
+  -addext "subjectAltName=IP:$PUBLIC_IP"
 ```
 
-Crie `deploy/docker/docker-compose.override.yml`:
+Create `deploy/docker/docker-compose.override.yml`:
 
 ```yaml
 services:
@@ -79,12 +78,12 @@ services:
       Kestrel__Certificates__Default__KeyPath: /tls/tls.key
 ```
 
-Em cloud, publique no firewall apenas a porta `8443`. Não abra as portas
-5432, 5001, 5002, 5003 ou 5004.
+In the cloud, expose only port `8443` in the firewall. Do not open ports 5432,
+5001, 5002, 5003 or 5004.
 
-## 4. Iniciar os serviços
+## 4. Start the services
 
-Execute a partir de `~/lesto/deploy/docker`:
+Run from `~/lesto/deploy/docker`:
 
 ```bash
 docker compose up postgres -d
@@ -96,19 +95,18 @@ docker compose up api-gateway --build -d
 docker compose ps
 ```
 
-Verifique o Gateway:
+Check the Gateway:
 
 ```bash
 curl -k https://localhost:8443/health/live
 docker compose logs --tail=100 api-gateway payment-service
 ```
 
-O webhook Stripe deve apontar para:
+The Stripe webhook should point to:
 
 ```text
 https://<PUBLIC_IP>:8443/api/payments/webhook
 ```
 
-Um certificado autoassinado pode impedir a entrega normal de webhooks Stripe;
-nesse caso, use o Stripe CLI para desenvolvimento local ou um certificado
-confiável.
+A self-signed certificate may prevent normal Stripe webhook delivery. In that
+case, use the Stripe CLI for local development or a trusted certificate.

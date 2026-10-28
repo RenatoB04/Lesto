@@ -14,14 +14,14 @@
           "name": "Auth",
           "item": [
             {
-              "name": "Login Admin",
+              "name": "Admin Login",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Login com sucesso\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Guarda o token numa variável de ambiente chamada token_administrador\r\n    pm.environment.set(\"token_administrador\", jsonData.token);\r\n}"
+                      "pm.test(\"Successful login\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Stores the token in the environment variable admin_token\r\n    pm.environment.set(\"admin_token\", jsonData.token);\r\n}"
                     ]
                   }
                 }
@@ -53,14 +53,14 @@
               "response": []
             },
             {
-              "name": "Login Gestor",
+              "name": "Manager Login",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Login com sucesso\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Guarda o token numa variável de ambiente chamada token_gestor\r\n    pm.environment.set(\"token_gestor\", jsonData.token);\r\n}"
+                      "pm.test(\"Successful login\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Stores the token in the environment variable manager_token\r\n    pm.environment.set(\"manager_token\", jsonData.token);\r\n}"
                     ]
                   }
                 }
@@ -92,14 +92,14 @@
               "response": []
             },
             {
-              "name": "Login Estafeta",
+              "name": "Courier Login",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Login com sucesso\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Guarda o token numa variável de ambiente chamada token_estafeta\r\n    pm.environment.set(\"token_estafeta\", jsonData.token);\r\n}"
+                      "pm.test(\"Successful login\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Stores the token in the environment variable courier_token\r\n    pm.environment.set(\"courier_token\", jsonData.token);\r\n}"
                     ]
                   }
                 }
@@ -109,7 +109,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n  \"email\": \"{{estafetaEmail}}\",\r\n  \"password\": \"{{estafetaPassword}}\"\r\n}",
+                  "raw": "{\r\n  \"email\": \"{{courierEmail}}\",\r\n  \"password\": \"{{courierPassword}}\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -131,14 +131,14 @@
               "response": []
             },
             {
-              "name": "Login Cliente",
+              "name": "Customer Login",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Login com sucesso\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Guarda o token numa variável de ambiente chamada token_cliente\r\n    pm.environment.set(\"token_cliente\", jsonData.token);\r\n}"
+                      "pm.test(\"Successful login\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nvar jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    // Stores the token in the environment variable customer_token\r\n    pm.environment.set(\"customer_token\", jsonData.token);\r\n}"
                     ]
                   }
                 }
@@ -175,14 +175,14 @@
           "name": "Users",
           "item": [
             {
-              "name": "Listar Utilizadores (Admin)",
+              "name": "List Users (Admin)",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Admin consegue listar utilizadores (Status 200)\", function () {\r\n    pm.response.to.have.status(200);\r\n});"
+                      "pm.test(\"Admin can list users (Status 200)\", function () {\r\n    pm.response.to.have.status(200);\r\n});"
                     ]
                   }
                 }
@@ -193,7 +193,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "{{token_administrador}}",
+                      "value": "{{admin_token}}",
                       "type": "string"
                     }
                   ]
@@ -214,14 +214,14 @@
               "response": []
             },
             {
-              "name": "Listar Utilizadores (Falha Cliente)",
+              "name": "List Users (Customer Forbidden)",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"Cliente é bloqueado (Status 403 Forbidden)\", function () {\r\n    pm.response.to.have.status(403);\r\n});"
+                      "pm.test(\"Customer is blocked (Status 403 Forbidden)\", function () {\r\n    pm.response.to.have.status(403);\r\n});"
                     ]
                   }
                 }
@@ -232,7 +232,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "{{token_cliente}}",
+                      "value": "{{customer_token}}",
                       "type": "string"
                     }
                   ]
@@ -260,14 +260,14 @@
       "name": "Order",
       "item": [
         {
-          "name": "Alterar Definição (Administrador)",
+          "name": "Update Setting (Administrator)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Definição atualizada\", function () { pm.response.to.have.status(200); });"
+                  "pm.test(\"Setting updated\", function () { pm.response.to.have.status(200); });"
                 ]
               }
             }
@@ -278,7 +278,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_administrador}}",
+                  "value": "{{admin_token}}",
                   "type": "string"
                 }
               ]
@@ -309,14 +309,14 @@
           "response": []
         },
         {
-          "name": "Obter ID do Estafeta (Administrador)",
+          "name": "Get Courier ID (Administrator)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Utilizadores obtidos\", function () { pm.response.to.have.status(200); });\r\nvar users = pm.response.json();\r\nvar estafeta = users.find(u => u.role === \"Estafeta\");\r\nif(estafeta) pm.environment.set(\"id_estafeta\", estafeta.id);"
+                  "pm.test(\"Users retrieved\", function () { pm.response.to.have.status(200); });\r\nvar users = pm.response.json();\r\nvar courier = users.find(u => u.role === \"Estafeta\");\r\nif(courier) pm.environment.set(\"courier_id\", courier.id);"
                 ]
               }
             }
@@ -327,7 +327,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_administrador}}",
+                  "value": "{{admin_token}}",
                   "type": "string"
                 }
               ]
@@ -348,14 +348,14 @@
           "response": []
         },
         {
-          "name": "Obter Pontos do Mapa (Cliente)",
+          "name": "Get Map Points (Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Pontos obtidos\", function () { pm.response.to.have.status(200); });\r\nvar pontos = pm.response.json();\r\nif(pontos.length >= 2) {\r\n    pm.environment.set(\"ponto_origem\", pontos[0].id);\r\n    pm.environment.set(\"ponto_destino\", pontos[1].id);\r\n}"
+                  "pm.test(\"Points retrieved\", function () { pm.response.to.have.status(200); });\r\nvar points = pm.response.json();\r\nif(points.length >= 2) {\r\n    pm.environment.set(\"origin_point_id\", pontos[0].id);\r\n    pm.environment.set(\"destination_point_id\", pontos[1].id);\r\n}"
                 ]
               }
             }
@@ -366,7 +366,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_cliente}}",
+                  "value": "{{customer_token}}",
                   "type": "string"
                 }
               ]
@@ -387,14 +387,14 @@
           "response": []
         },
         {
-          "name": "Criar Encomenda 1 - Sucesso (Cliente)",
+          "name": "Create Order 1 - Success (Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomenda 1 criada\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif(data.orderId) pm.environment.set(\"order_id_1\", data.orderId);"
+                  "pm.test(\"Order 1 created\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif(data.orderId) pm.environment.set(\"order_id_1\", data.orderId);"
                 ]
               }
             }
@@ -405,7 +405,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_cliente}}",
+                  "value": "{{customer_token}}",
                   "type": "string"
                 }
               ]
@@ -414,7 +414,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"originPointId\": \"{{ponto_origem}}\",\r\n  \"destinationPointId\": \"{{ponto_destino}}\",\r\n  \"weight\": 10.5,\r\n  \"type\": \"Normal\",\r\n  \"recipientData\": \"João Silva, Porta 1\"\r\n}",
+              "raw": "{\r\n  \"originPointId\": \"{{origin_point_id}}\",\r\n  \"destinationPointId\": \"{{destination_point_id}}\",\r\n  \"weight\": 10.5,\r\n  \"type\": \"Normal\",\r\n  \"recipientData\": \"John Smith, Door 1\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -435,14 +435,14 @@
           "response": []
         },
         {
-          "name": "Criar Encomenda 2 - Para Rejeitar (Cliente)",
+          "name": "Create Order 2 - To Reject (Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomenda 2 criada\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif(data.orderId) pm.environment.set(\"order_id_2\", data.orderId);"
+                  "pm.test(\"Order 2 created\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif(data.orderId) pm.environment.set(\"order_id_2\", data.orderId);"
                 ]
               }
             }
@@ -453,7 +453,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_cliente}}",
+                  "value": "{{customer_token}}",
                   "type": "string"
                 }
               ]
@@ -462,7 +462,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"originPointId\": \"{{ponto_origem}}\",\r\n  \"destinationPointId\": \"{{ponto_destino}}\",\r\n  \"weight\": 10.5,\r\n  \"type\": \"Normal\",\r\n  \"recipientData\": \"João Silva, Porta 1\"\r\n}",
+              "raw": "{\r\n  \"originPointId\": \"{{origin_point_id}}\",\r\n  \"destinationPointId\": \"{{destination_point_id}}\",\r\n  \"weight\": 10.5,\r\n  \"type\": \"Normal\",\r\n  \"recipientData\": \"John Smith, Door 1\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -483,14 +483,14 @@
           "response": []
         },
         {
-          "name": "Pré-visualizar Morada (Cliente)",
+          "name": "Preview Address (Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Morada encontrada\", function () {\r\n    pm.response.to.have.status(200);\r\n    pm.expect(pm.response.json().latitude).to.be.a(\"number\");\r\n});"
+                  "pm.test(\"Address found\", function () {\r\n    pm.response.to.have.status(200);\r\n    pm.expect(pm.response.json().latitude).to.be.a(\"number\");\r\n});"
                 ]
               }
             }
@@ -501,7 +501,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_cliente}}",
+                  "value": "{{customer_token}}",
                   "type": "string"
                 }
               ]
@@ -524,19 +524,19 @@
                 }
               ]
             },
-            "description": "Converte a morada em coordenadas (Nominatim) para o cliente confirmar o local antes de criar a encomenda."
+            "description": "Converts an address to coordinates (Nominatim) so the customer can confirm the location before creating the order."
           },
           "response": []
         },
         {
-          "name": "Criar Encomenda 3 - Com Moradas (Cliente)",
+          "name": "Create Order 3 - With Addresses (Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomenda com moradas criada\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif (data.orderId) pm.environment.set(\"order_id_3\", data.orderId);"
+                  "pm.test(\"Order with addresses created\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif (data.orderId) pm.environment.set(\"order_id_3\", data.orderId);"
                 ]
               }
             }
@@ -547,7 +547,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_cliente}}",
+                  "value": "{{customer_token}}",
                   "type": "string"
                 }
               ]
@@ -577,14 +577,14 @@
           "response": []
         },
         {
-          "name": "Criar Encomenda - Morada Inexistente (Cliente) - 422",
+          "name": "Create Order - Unknown Address (Customer) - 422",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Morada não encontrada\", function () { pm.response.to.have.status(422); });"
+                  "pm.test(\"Address not found\", function () { pm.response.to.have.status(422); });"
                 ]
               }
             }
@@ -595,7 +595,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_cliente}}",
+                  "value": "{{customer_token}}",
                   "type": "string"
                 }
               ]
@@ -625,14 +625,14 @@
           "response": []
         },
         {
-          "name": "Listar Encomendas (Gestor)",
+          "name": "List Orders (Manager)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomendas listadas pelo gestor\", function () { pm.response.to.have.status(200); });"
+                  "pm.test(\"Orders listed by manager\", function () { pm.response.to.have.status(200); });"
                 ]
               }
             }
@@ -643,7 +643,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_gestor}}",
+                  "value": "{{manager_token}}",
                   "type": "string"
                 }
               ]
@@ -664,14 +664,14 @@
           "response": []
         },
         {
-          "name": "Atribuir Encomenda 1 Sem Pagamento (Gestor) - 409",
+          "name": "Assign Unpaid Order 1 (Manager) - 409",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomenda por pagar não pode ser atribuída\", function () { pm.response.to.have.status(409); });"
+                  "pm.test(\"Unpaid order cannot be assigned\", function () { pm.response.to.have.status(409); });"
                 ]
               }
             }
@@ -682,7 +682,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_gestor}}",
+                  "value": "{{manager_token}}",
                   "type": "string"
                 }
               ]
@@ -703,7 +703,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{ \"courierId\": \"{{id_estafeta}}\" }",
+              "raw": "{ \"courierId\": \"{{courier_id}}\" }",
               "options": {
                 "raw": {
                   "language": "json"
@@ -714,14 +714,14 @@
           "response": []
         },
         {
-          "name": "Pagar Encomenda 1 - Checkout Stripe (Cliente)",
+          "name": "Pay Order 1 - Stripe Checkout (Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Sessão de pagamento criada\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif (data.checkoutUrl) { pm.environment.set(\"checkout_url\", data.checkoutUrl); console.log(\"Abrir no browser e pagar com 4242 4242 4242 4242: \" + data.checkoutUrl); }"
+                  "pm.test(\"Payment session created\", function () { pm.response.to.have.status(201); });\r\nvar data = pm.response.json();\r\nif (data.checkoutUrl) { pm.environment.set(\"checkout_url\", data.checkoutUrl); console.log(\"Open in the browser and pay with 4242 4242 4242 4242: \" + data.checkoutUrl); }"
                 ]
               }
             }
@@ -732,7 +732,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_cliente}}",
+                  "value": "{{customer_token}}",
                   "type": "string"
                 }
               ]
@@ -759,19 +759,19 @@
                 }
               }
             },
-            "description": "Devolve checkoutUrl. Abrir o URL no browser e pagar com o cartão de teste 4242 4242 4242 4242 (qualquer data futura e CVC) antes de correr o pedido seguinte."
+            "description": "Returns checkoutUrl. Open it in the browser and pay with test card 4242 4242 4242 4242 (any future date and CVC) before running the next request."
           },
           "response": []
         },
         {
-          "name": "Estado do Pagamento Encomenda 1 (Cliente)",
+          "name": "Order 1 Payment Status (Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Pagamento confirmado pelo Stripe\", function () {\r\n    pm.response.to.have.status(200);\r\n    pm.expect(pm.response.json().status).to.eql(\"Paid\");\r\n});"
+                  "pm.test(\"Payment confirmed by Stripe\", function () {\r\n    pm.response.to.have.status(200);\r\n    pm.expect(pm.response.json().status).to.eql(\"Paid\");\r\n});"
                 ]
               }
             }
@@ -782,7 +782,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_cliente}}",
+                  "value": "{{customer_token}}",
                   "type": "string"
                 }
               ]
@@ -805,14 +805,14 @@
           "response": []
         },
         {
-          "name": "Atribuir Encomenda 1 (Gestor)",
+          "name": "Assign Order 1 (Manager)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomenda 1 atribuída\", function () { pm.response.to.have.status(200); });"
+                  "pm.test(\"Order 1 assigned\", function () { pm.response.to.have.status(200); });"
                 ]
               }
             }
@@ -823,7 +823,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_gestor}}",
+                  "value": "{{manager_token}}",
                   "type": "string"
                 }
               ]
@@ -832,7 +832,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{ \"courierId\": \"{{id_estafeta}}\" }",
+              "raw": "{ \"courierId\": \"{{courier_id}}\" }",
               "options": {
                 "raw": {
                   "language": "json"
@@ -855,14 +855,14 @@
           "response": []
         },
         {
-          "name": "Rota Otimizada (Estafeta)",
+          "name": "Optimized Route (Courier)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Rota calculada\", function () {\r\n    pm.response.to.have.status(200);\r\n    var rota = pm.response.json();\r\n    pm.expect(rota.stops.length).to.be.above(0);\r\n    console.log(\"Fonte: \" + rota.source + \" | \" + rota.totalDistanceKm + \" km (ordem ingénua: \" + rota.baselineDistanceKm + \" km, poupança \" + rota.savingPercent + \"%)\");\r\n    if (rota.googleMapsUrl) console.log(\"Google Maps: \" + rota.googleMapsUrl);\r\n});"
+                  "pm.test(\"Route calculated\", function () {\r\n    pm.response.to.have.status(200);\r\n    var rota = pm.response.json();\r\n    pm.expect(rota.stops.length).to.be.above(0);\r\n    console.log(\"Source: \" + rota.source + \" | \" + rota.totalDistanceKm + \" km (baseline order: \" + rota.baselineDistanceKm + \" km, saving \" + rota.savingPercent + \"%)\");\r\n    if (rota.googleMapsUrl) console.log(\"Google Maps: \" + rota.googleMapsUrl);\r\n});"
                 ]
               }
             }
@@ -873,7 +873,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_estafeta}}",
+                  "value": "{{courier_token}}",
                   "type": "string"
                 }
               ]
@@ -901,19 +901,19 @@
                 }
               ]
             },
-            "description": "Ordena as recolhas e entregas das encomendas atribuídas ao estafeta (partida no IPCA). Com mais encomendas atribuídas ao mesmo estafeta a poupança face à ordem ingénua fica mais visível."
+            "description": "Orders the pickups and deliveries assigned to the courier (starting at IPCA). With more orders assigned to the same courier, the saving compared with the baseline order is more visible."
           },
           "response": []
         },
         {
-          "name": "Rejeitar Encomenda 2 (Gestor)",
+          "name": "Reject Order 2 (Manager)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomenda 2 rejeitada\", function () { pm.response.to.have.status(200); });"
+                  "pm.test(\"Order 2 rejected\", function () { pm.response.to.have.status(200); });"
                 ]
               }
             }
@@ -924,7 +924,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_gestor}}",
+                  "value": "{{manager_token}}",
                   "type": "string"
                 }
               ]
@@ -933,7 +933,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{ \"reason\": \"Morada incompleta ou incorreta\" }",
+              "raw": "{ \"reason\": \"Incomplete or incorrect address\" }",
               "options": {
                 "raw": {
                   "language": "json"
@@ -956,14 +956,14 @@
           "response": []
         },
         {
-          "name": "Recolher Encomenda 1 (Estafeta)",
+          "name": "Pick Up Order 1 (Courier)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomenda 1 recolhida\", function () { pm.response.to.have.status(200); });"
+                  "pm.test(\"Order 1 picked up\", function () { pm.response.to.have.status(200); });"
                 ]
               }
             }
@@ -974,7 +974,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_estafeta}}",
+                  "value": "{{courier_token}}",
                   "type": "string"
                 }
               ]
@@ -997,14 +997,14 @@
           "response": []
         },
         {
-          "name": "Entregar Encomenda 1 (Estafeta)",
+          "name": "Deliver Order 1 (Courier)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Encomenda 1 entregue\", function () { pm.response.to.have.status(200); });"
+                  "pm.test(\"Order 1 delivered\", function () { pm.response.to.have.status(200); });"
                 ]
               }
             }
@@ -1015,7 +1015,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{token_estafeta}}",
+                  "value": "{{courier_token}}",
                   "type": "string"
                 }
               ]
